@@ -322,6 +322,10 @@ datasetslist:
 
 #### EuRoCMAV
 ###############
+LifelongSLAM : # make ~ useless
+	
+	@echo "success"
+
 
 ./datasets/EuRoCMAV/%.zip :  # Example : $* = machine_hall/MH_01_easy/MH_01_easy
 	mkdir -p $(@D)
@@ -334,7 +338,7 @@ datasetslist:
 
 ./datasets/EuRoCMAV/%.slam :  ./datasets/EuRoCMAV/%.dir 
 	if [ ! -e ./build/bin/dataset-generator ] ; then make slambench ; fi
-	./build/bin/dataset-generator -d eurocmav -i $</mav0 -o $@ -imu true -stereo true -gt true  
+	./build/bin/dataset-generator -d eurocmav -i $</mav0 -o $@ -imu true -stereo true -gt true 
 
 #### TUM      
 ###############

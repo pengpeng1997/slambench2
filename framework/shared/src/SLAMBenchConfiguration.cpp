@@ -141,7 +141,8 @@ bool SLAMBenchConfiguration::add_input(std::string input_file) {
 	// TODO: Handle other types of interface
 	// TODO: Add a getFrameStream in Config to handle that
 	// TODO: config will be aware of sensors and then sensors will be able to add there arguments
-
+	//pengpeng todo: if(input_file == "LifelongSLAM") { std::vector<FILE *> input_desc; }
+	//thus needn't to add a new parameter and design its callback function.
 	if (input_file == "oni2") {
 		std::cerr << "Load OpenNI 2 interface ..." << std::endl;
 		this->SetInputInterface(new slambench::io::openni2::ONI2InputInterface());
