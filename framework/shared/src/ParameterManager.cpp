@@ -199,8 +199,8 @@ bool ParameterManager::ReadArguments(unsigned int argc, const char* const* const
 			return false;
 		}
 
-		auto the_component = param_info->first;
-		auto the_param     = param_info->second;
+		auto the_component = param_info->first;//ParameterComponent*
+		auto the_param     = param_info->second;//Parameter*
 		if(the_param) {
 
 			if (the_param->requiresValue()) {
