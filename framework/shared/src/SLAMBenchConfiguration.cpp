@@ -165,27 +165,6 @@ bool SLAMBenchConfiguration::add_input(std::string input_file) {
 	return true;
 }
 
-
-void help_callback(Parameter* , ParameterComponent* caller) {
-	SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
-	
-	std::cerr << " == SLAMBench Configuration ==" << std::endl;
-	config->GetParameterManager().PrintArguments(std::cerr);
-	exit(0);
-}
-
-void dse_callback(Parameter* , ParameterComponent* caller) {
-	SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
-	config->print_dse();
-	exit(0);
-}
-
-void log_callback(Parameter* , ParameterComponent* caller) {
-	SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
-	config->update_log_stream();
-}
-
-
 void SLAMBenchConfiguration::print_dse () {
 
     for (SLAMBenchLibraryHelper* lib : this->slam_libs) {
@@ -209,7 +188,7 @@ SLAMBenchConfiguration::SLAMBenchConfiguration () :
 	initialised_ = false;
 	this->input_interface = NULL;
 	this->log_stream = NULL;
-        this->slam_library_names = {};
+	this->slam_library_names = {};
 
 	// Run Related
 	this->addParameter(TypedParameter<unsigned int>("fl",     "frame-limit",      "last frame to compute",                   &this->frame_limit, &default_frame_limit));

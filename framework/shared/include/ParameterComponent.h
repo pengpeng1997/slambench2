@@ -12,7 +12,7 @@
 
 #include <string>
 #include <vector>
-
+#include <algorithm>
 
 class Parameter;
 class ParameterComponent;
@@ -56,6 +56,14 @@ public:
 
 	void AddComponent(ParameterComponent *component) {
 		_components.push_back(component);
+	}
+
+	void RemoveComponent(ParameterComponent *component) {
+		_components.erase(std::remove(_components.begin(), _components.end(), component), _components.end());
+	}
+
+	void ClearComponents() {
+		_components.clear();
 	}
 
 

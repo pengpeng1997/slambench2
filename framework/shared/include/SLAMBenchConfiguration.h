@@ -55,7 +55,7 @@ public:
     SLAMBenchConfiguration ();
 	virtual ~SLAMBenchConfiguration();
 
-private :
+protected :
 
     slam_lib_container_t slam_libs;
 
@@ -132,6 +132,10 @@ public :
 	void SetInputInterface(slambench::io::InputInterface *input_ref) {
 		input_interface = input_ref;
 	}
+    void reset_sensors()
+    {
+        GetParameterManager().ClearComponents();
+    }
 
     inline std::ostream& get_log_stream() {if (!log_stream)  update_log_stream(); return *log_stream;};
     inline void update_log_stream() {
@@ -155,6 +159,24 @@ public :
 
 };
 
+inline void help_callback(Parameter* , ParameterComponent* caller) {
+    SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
+
+    std::cerr << " == SLAMBench Configuration ==" << std::endl;
+    config->GetParameterManager().PrintArguments(std::cerr);
+    exit(0);
+}
+
+inline void dse_callback(Parameter* , ParameterComponent* caller) {
+    SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
+    config->print_dse();
+    exit(0);
+}
+
+inline void log_callback(Parameter* , ParameterComponent* caller) {
+    SLAMBenchConfiguration* config = dynamic_cast<SLAMBenchConfiguration*> (caller);
+    config->update_log_stream();
+}
 
 
 

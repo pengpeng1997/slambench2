@@ -25,7 +25,7 @@
 
 class SLAMBenchLibraryHelper : public ParameterComponent {
 
-private :
+protected :
 	std::string                        _identifier;
 	std::string                        _library_name;
     slambench::metrics::MetricManager  _metric_manager;
@@ -83,6 +83,10 @@ public :
     inline const slambench::io::SensorCollection &get_sensors() {
 		return this->get_input_interface()->GetSensors();
 	}
+    inline void updateInputInterface(slambench::io::InputInterface* i)
+    {
+        _input_interface = i;
+    }
 
 
 
