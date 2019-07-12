@@ -53,6 +53,7 @@ typedef  std::chrono::time_point<std::chrono::high_resolution_clock> stl_time;
 class SLAMBenchConfiguration : public ParameterComponent {
 public:
     SLAMBenchConfiguration ();
+    SLAMBenchConfiguration  (void (*input_callback)(Parameter*, ParameterComponent*),void (*libs_callback)(Parameter*, ParameterComponent*));
 	virtual ~SLAMBenchConfiguration();
 
 protected :

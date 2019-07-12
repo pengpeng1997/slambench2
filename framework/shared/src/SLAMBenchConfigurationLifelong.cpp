@@ -46,7 +46,8 @@
 #include <dlfcn.h>
 #define LOAD_FUNC2HELPER(handle,lib,f)     *(void**)(& lib->f) = dlsym(handle,#f); const char *dlsym_error_##lib##f = dlerror(); if (dlsym_error_##lib##f) {std::cerr << "Cannot load symbol " << #f << dlsym_error_##lib##f << std::endl; dlclose(handle); exit(1);}
 
-
+//TODO: (Mihai) too much duplicated code here. One option is to move LOAD_FUNC2HELPER into the SLAMBenchConfiguration header
+// Need to figure out how to avoid rewriting the whole thing without breaking SLAMBenchConfiguration
 void SLAMBenchConfigurationLifelong::add_slam_library(std::string so_file, std::string identifier) {
 
     std::cerr << "new library name: " << so_file  << std::endl;
@@ -146,26 +147,7 @@ bool SLAMBenchConfigurationLifelong::add_input(std::string input_file) {
 }
 
 
-SLAMBenchConfigurationLifelong::SLAMBenchConfigurationLifelong  () {
-
-    initialised_ = false;
-    this->input_interface = NULL;
-    this->log_stream = NULL;
-    this->slam_library_names = {};
-
-    // Run Related
-    this->addParameter(TypedParameter<unsigned int>("fl",     "frame-limit",      "last frame to compute",                   &this->frame_limit, &default_frame_limit));
-    this->addParameter(TypedParameter<std::string>("o",     "log-file",      "Output log file",                   &this->log_file, &default_log_file, log_callback));
-    this->addParameter(TypedParameter<std::vector<std::string>>("i",     "input" ,        "Specify the input file or mode." ,  &this->input_files, &default_input_files , dataset_callback));
-    this->addParameter(TypedParameter<std::vector<std::string> >("load",  "load-slam-library" , "Load a specific SLAM library."     , &this->slam_library_names, &default_slam_libraries , libs_callback ));
-    this->addParameter(TriggeredParameter("dse",   "dse",    "Output solution space of parameters.",    dse_callback));
-    this->addParameter(TriggeredParameter("h",     "help",   "Print the help.", help_callback));
-    this->addParameter(TypedParameter<bool>("realtime",     "realtime-mode",      "realtime frame loading mode",                   &this->realtime_mode_, &default_is_false));
-    this->addParameter(TypedParameter<double>("realtime-mult",     "realtime-multiplier",      "realtime frame loading mode",                   &this->realtime_mult_, &default_realtime_mult));
-
-    param_manager_.AddComponent(this);
-
-};
+SLAMBenchConfigurationLifelong::SLAMBenchConfigurationLifelong() : SLAMBenchConfiguration(dataset_callback, libs_callback) {}
 
 void SLAMBenchConfigurationLifelong::InitGroundtruth(bool with_point_cloud) {
 
