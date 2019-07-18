@@ -263,9 +263,6 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
             if(!ongoing) {
                 config->FireEndOfFrame();
-                if (ui) ui->stepFrame();
-                frame_count += 1;
-
                 if (config_lifelong->frame_limit) {
                     if (frame_count >= config_lifelong->frame_limit) {
                         break;
@@ -299,6 +296,8 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
                 lib->c_sb_update_frame(lib,gt_frame);
             }
         }
+        bags_count++;
+        frame_count = 0;
     }
 
 }
@@ -307,10 +306,11 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
 slambench::io::InputInterface * SLAMBenchConfigurationLifelong::GetCurrentInputInterface()
 {
-    if(input_interfaces.front() == nullptr) {
-        throw std::logic_error("Input interface has not been added to SLAM configuration");
+    if(input_interfaces.empty()) {
+        return nullptr; // FIXME: (Mihai) this looks dodgy
+        //throw std::logic_error("Input interface has not been added to SLAM configuration");
     }
-    return input_interfaces.front();
+    return input_interfaces.back();
 }
 
 const slambench::io::SensorCollection& SLAMBenchConfigurationLifelong::GetSensors()
@@ -324,7 +324,6 @@ void SLAMBenchConfigurationLifelong::AddInputInterface(slambench::io::InputInter
 }
 
 void SLAMBenchConfigurationLifelong::init_sensors() {
-
     for (slambench::io::Sensor *sensor : this->GetCurrentInputInterface()->GetSensors()) {
         GetParameterManager().AddComponent(dynamic_cast<ParameterComponent*>(&(*sensor)));
     }
@@ -333,8 +332,7 @@ void SLAMBenchConfigurationLifelong::init_sensors() {
 void SLAMBenchConfigurationLifelong::LoadNextInputInterface() {
     input_interfaces.pop_back();
     reset_sensors();
-    // TODO: decide if this should be handled differently
-    if(input_interfaces.front() == nullptr)
+    if(input_interfaces.empty())
         return;
 
     init_sensors();
