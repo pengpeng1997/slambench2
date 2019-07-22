@@ -14,47 +14,24 @@
 #include <io/sensor/GroundTruthSensor.h>
 #include "../../dataset-tools/include/DatasetReader.h"
 
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <vector>
+#include <yaml-cpp/yaml.h>
+
 namespace slambench {
 
 namespace io {
+	const int INF = 99;
+    typedef std::pair<int, int> trans_direction;
+
+    Eigen::Matrix4f compute_trans_matrix(std::string input_name_1, std::string input_name_2, std::string filename);
 
 class LifelongSLAMReader :  public DatasetReader {
-	
-private :
-   //to be assigned values
-   	
-
-	// I took those numbers from the TUM dataset paper
-	static constexpr CameraSensor::intrinsics_t fr1_intrinsics_rgb   = { 0.80828125, 1.076041667, 0.4978125, 0.531875 };
-	static constexpr DepthSensor::intrinsics_t  fr1_intrinsics_depth = { 0.92359375, 1.229375,    0.5171875, 0.4875   };
-	static constexpr CameraSensor::intrinsics_t fr2_intrinsics_rgb   = { 0.81390624, 1.085416667, 0.5079687, 0.52020  };
-	static constexpr DepthSensor::intrinsics_t  fr2_intrinsics_depth = { 0.9075,     1.212083333, 0.4825,    0.52708  };
-
-
-	// I took those numbers from ORBSLAM2 examples
-
-	static constexpr float fr1_fps =  30.0 ;
-	static constexpr float fr1_bf =  40.0 ;
-	static constexpr float fr1_ThDepth =  40.0 ;
-	static constexpr float fr1_DepthMapFactor =  5000.0 ;
-
-	static constexpr float fr2_fps =  30.0 ;
-	static constexpr float fr2_bf =  40.0 ;
-	static constexpr float fr2_ThDepth =  40.0 ;
-	static constexpr float fr2_DepthMapFactor =  5208.0 ;
-
-
-	static constexpr CameraSensor::distortion_coefficients_t fr1_distortion_rgb   = { 0.262383 ,	 -0.953104,	 -0.005358,	 0.002628 ,	 1.163314  };
-	static constexpr CameraSensor::distortion_coefficients_t fr2_distortion_rgb   = { 0.231222  ,	 -0.784899 , -0.003257 , -0.000105 , 0.917205    };
-
-	static constexpr DepthSensor::distortion_coefficients_t  fr1_distortion_depth = { 0.262383,	 -0.953104,	 -0.005358,	 0.002628, 	 1.163314   };
-	static constexpr DepthSensor::distortion_coefficients_t  fr2_distortion_depth = {  0.231222  ,	 -0.784899 , -0.003257 , -0.000105 , 0.917205  };
-
-
 
 public :
 	std::string input;
-	bool rgb = true, depth = true, gt = true, accelerometer = true, gyro = true, odom = true, grey = true;
+	bool rgb = true, depth = true, gt = true, stereo = false, accelerometer = true, gyro = true, odom = true, grey = true;
 
 	LifelongSLAMReader(std::string name) : DatasetReader(name) {
 
@@ -62,11 +39,12 @@ public :
 		this->addParameter(TypedParameter<bool>("grey",     "grey",       "set to true or false to specify if the GREY stream need to be include in the slam file.",   &this->grey, NULL));
 		this->addParameter(TypedParameter<bool>("rgb",     "rgb",       "set to true or false to specify if the RGB stream need to be include in the slam file.",   &this->rgb, NULL));
 		this->addParameter(TypedParameter<bool>("depth",     "depth",       "set to true or false to specify if the DEPTH stream need to be include in the slam file.",   &this->depth, NULL));
-		this->addParameter(TypedParameter<bool>("gt",     "gt",       "set to true or false to specify if the GROUNDTRUTH POSE stream need to be include in the slam file.",   &this->gt, NULL));
+		this->addParameter(TypedParameter<bool>("sgrey",     "stereo-fisheye-grey",       "set to true or false to specify if the STEREO GREY stream need to be include in the slam file.",   &this->stereo, NULL));
 		this->addParameter(TypedParameter<bool>("acc",    "accelerometer",       "set to true or false to specify if the ACCELEROMETER stream need to be include in the slam file.",   &this->accelerometer, NULL));
 		this->addParameter(TypedParameter<bool>("gyro",    "gyro",       "set to true or false to specify if the GYRO stream need to be include in the slam file.",   &this->gyro, NULL));
 		this->addParameter(TypedParameter<bool>("odom",    "odom",       "set to true or false to specify if the ODOMETRY stream need to be include in the slam file.",   &this->odom, NULL));
-		//要合并成imu
+		this->addParameter(TypedParameter<bool>("gt",     "gt",       "set to true or false to specify if the GROUNDTRUTH POSE stream need to be include in the slam file.",   &this->gt, NULL));
+		
 	}
 
 

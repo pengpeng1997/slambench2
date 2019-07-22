@@ -20,7 +20,7 @@
 #include <io/format/PointCloud.h>
 #include <Eigen/Eigen>
 
-
+#include <yaml-cpp/yaml.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
@@ -30,25 +30,158 @@
 
 using namespace slambench::io ;
 
-/*
- *
- * The dataset folder contains :
- * > accelerometer.txt  depth  depth.txt  groundtruth.txt  rgb  rgb.txt
- *
- */
+#include <cstdio>
+#include <dirent.h>
+#include <cstring>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <iostream>
+
+using namespace slambench::io;
+
+void Dijkstra(int n, int s, std::vector<std::vector<int> > G, std::vector<bool>& vis, std::vector<int>& d, std::vector<int>& pre)
+{
+       fill(d.begin(), d.end(), INF);
+       for (int i = 0; i < n; ++i)
+              pre[i] = i;
+
+       d[s] = 0;
+       for (int i = 0; i < n; ++i)
+       {
+              int u = -1;
+              int MIN = INF;
+              for (int j = 0; j < n; ++j)
+			  {
+                     if (vis[j] == false && d[j] < MIN)
+                     {
+                           u = j;
+                           MIN = d[j];
+                     }
+              }
+
+              if (u == -1)
+                     return;
+              vis[u] = true;
+              for (int v = 0; v < n; ++v)
+              {
+                     if (vis[v] == false && d[u] + G[u][v] < d[v]) {
+                           d[v] = d[u] + G[u][v];
+                           pre[v] = u;
+                     }
+              }
+       }
+}
+
+void DFSPrint(int s, int v, std::vector<int> pre, std::vector<int> &result)
+{
+       if (v == s) {
+              result.push_back(s);
+              return;
+       }
+       DFSPrint(s, pre[v], pre, result);
+       result.push_back(v);
+}
+
+Eigen::Matrix4f slambench::io::compute_trans_matrix(std::string input_name_1, std::string input_name_2, std::string filename)
+{
+    YAML::Node f = YAML::LoadFile(filename.c_str());
+
+    std::map<std::string, int> name_to_index;
+    std::map<trans_direction, Eigen::Matrix4f> transations;
+    int num = 0;
+    for(int i = 0; i < f["trans_matrix"].size(); i++) {
+        int index_1, index_2;
+        std::string name_1 = f["trans_matrix"][i]["name_1"].as<std::string>();
+        if(name_to_index.count(name_1) == 0){
+            name_to_index[name_1] = num;
+            num++;
+        }
+        std::string name_2 = f["trans_matrix"][i]["name_2"].as<std::string>();
+        if(name_to_index.count(name_2) == 0){
+            name_to_index[name_2] = num;
+            num++;
+        }
+        index_1 = name_to_index[name_1];
+        index_2 = name_to_index[name_2];
+        trans_direction dir(index_1, index_2);
+        Eigen::Matrix4f trans_matrix;
+        trans_matrix << f["trans_matrix"][i]["matrix"]["data"][0].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][1].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][2].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][3].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][4].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][5].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][6].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][7].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][8].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][9].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][10].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][11].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][12].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][13].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][14].as<float>(),
+                f["trans_matrix"][i]["matrix"]["data"][15].as<float>();//problem
+        transations[dir] = trans_matrix;
+        trans_direction dir_inv(index_2, index_1);
+        transations[dir_inv] = trans_matrix.inverse();
+    }
+
+       int s = name_to_index[input_name_1];
+       int v = name_to_index[input_name_2];
+       int n = name_to_index.size();
+
+       std::vector<std::vector<int> > G;
+       std::vector<int> g;
+       for(int j = 0; j < n; j++) {
+           g.push_back(INF);
+       }
+       for(int i = 0; i < n; i++) {
+           G.push_back(g);
+       }
+       for(std::map<trans_direction, Eigen::Matrix4f>::iterator it = transations.begin(); it != transations.end(); ++it) {
+           trans_direction index_pair = it->first;
+           G[index_pair.first][index_pair.second] = 1;
+       }
+
+       std::vector<bool> vis(n);
+       std::vector<int> d(n);
+       std::vector<int> pre(n);
+       Dijkstra(n, s, G, vis, d, pre);
+       std::vector<int> result;
+       DFSPrint(s, v, pre, result);
+ 
+       Eigen::Matrix4f result_matrix = Eigen::MatrixXf::Identity(4,4);
+       for(std::vector<int>::iterator it = result.begin(); it != (result.end() - 1); it++ ){
+            trans_direction dir(*it, *(it + 1));
+            Eigen::Matrix4f trans = transations[dir];
+            result_matrix = result_matrix * trans;
+       }
+       return result_matrix;
+}
 
 
 bool analyseLifelongSLAMFolder(const std::string &dirname) {
 
 	static const std::vector<std::string> requirements = {
-			"accel.csv",
-            "gyro.csv",
+			"d400_accel.csv",
+            "d400_gyro.csv",
+			"t265_accel.csv",
+            "t265_gyro.csv",
             "odom.csv",
-			"bgr.txt",
-			"bgr",
+			"color.txt",
+			"color",
 			"depth.txt",
 			"depth",
-			"GroundTruth.csv"
+			"aligned_depth.txt",
+			"aligned_depth",
+			"Fisheye_1.txt",
+			"Fisheye_1",
+			"Fisheye_2.txt",
+			"Fisheye_2",
+			"GroundTruth.csv",
+			"sensors.yaml",
+			"trans_matrix.yaml"
 	};
 
 	try {
@@ -79,29 +212,47 @@ bool analyseLifelongSLAMFolder(const std::string &dirname) {
 }
 
 
-bool loadLifelongSLAMDepthData(const std::string &dirname , SLAMFile &file, const Sensor::pose_t &pose, const DepthSensor::intrinsics_t &intrinsics,const CameraSensor::distortion_coefficients_t &distortion,  const DepthSensor::disparity_params_t &disparity_params, const DepthSensor::disparity_type_t &disparity_type) {
+bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file, const DepthSensor::disparity_params_t &disparity_params,const DepthSensor::disparity_type_t &disparity_type) {
+
+	std::string filename = dirname + "/sensors.yaml";
+	YAML::Node f = YAML::LoadFile(filename.c_str());
+    
 
 	DepthSensor *depth_sensor = new DepthSensor("Depth");
+
 	depth_sensor->Index = 0;
-	depth_sensor->Width = 848;
-	depth_sensor->Height = 480;
+	depth_sensor->Width = f[sensor_name]["width"].as<int>();
+	depth_sensor->Height = f[sensor_name]["height"].as<int>();
 	depth_sensor->FrameFormat = frameformat::Raster;
 	depth_sensor->PixelFormat = pixelformat::D_I_16;
 	depth_sensor->DisparityType = disparity_type;
-	depth_sensor->Description = "Depth";
-	depth_sensor->CopyPose(pose);
-	depth_sensor->CopyIntrinsics(intrinsics);
 	depth_sensor->CopyDisparityParams(disparity_params);
-	depth_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
-	depth_sensor->CopyRadialTangentialDistortion(distortion);
+	depth_sensor->Description = "Depth";
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	depth_sensor->CopyPose(pose);
+
+	depth_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / depth_sensor->Width;
+	depth_sensor->Intrinsics[1] = f[sensor_name]["intrinsics"]["data"][1].as<float>() / depth_sensor->Height;
+	depth_sensor->Intrinsics[2] = f[sensor_name]["intrinsics"]["data"][2].as<float>() / depth_sensor->Width;
+	depth_sensor->Intrinsics[3] = f[sensor_name]["intrinsics"]["data"][3].as<float>() / depth_sensor->Height;
+
+	if (f[sensor_name]["distortion_model"].as<std::string>() == "radial-tangential") {
+		depth_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
+		depth_sensor->RadialTangentialDistortion[0] = f[sensor_name]["distortion_coefficients"]["data"][0].as<float>();
+		depth_sensor->RadialTangentialDistortion[1] = f[sensor_name]["distortion_coefficients"]["data"][1].as<float>();
+		depth_sensor->RadialTangentialDistortion[2] = f[sensor_name]["distortion_coefficients"]["data"][2].as<float>();
+		depth_sensor->RadialTangentialDistortion[3] = f[sensor_name]["distortion_coefficients"]["data"][3].as<float>();
+		depth_sensor->RadialTangentialDistortion[4] = 0;//??
+	}
 	depth_sensor->Index = file.Sensors.size();
-	depth_sensor->Rate = 30.0;
+	depth_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
 	file.Sensors.AddSensor(depth_sensor);
 
 	std::string line;
 
 	std::ifstream infile(dirname + "/" + "depth.txt");
+	// std::ifstream infile(dirname + "/" + "aligned_depth.txt");
 
 	boost::smatch match;
 
@@ -146,27 +297,41 @@ bool loadLifelongSLAMDepthData(const std::string &dirname , SLAMFile &file, cons
 }
 
 
-bool loadLifelongSLAMRGBData(const std::string &dirname , SLAMFile &file, const Sensor::pose_t &pose, const CameraSensor::intrinsics_t &intrinsics, const CameraSensor::distortion_coefficients_t &distortion) {
-
+bool loadLifelongSLAMRGBData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
+	std::string filename = dirname + "/sensors.yaml";
+	YAML::Node f = YAML::LoadFile(filename.c_str());
+ 
 	CameraSensor *rgb_sensor = new CameraSensor("RGB", CameraSensor::kCameraType);
 	rgb_sensor->Index = 0;
-	rgb_sensor->Width = 848;
-	rgb_sensor->Height = 480;
+	rgb_sensor->Width = f[sensor_name]["width"].as<int>();
+	rgb_sensor->Height = f[sensor_name]["height"].as<int>();
 	rgb_sensor->FrameFormat = frameformat::Raster;
 	rgb_sensor->PixelFormat = pixelformat::RGB_III_888;
 	rgb_sensor->Description = "RGB";
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
 	rgb_sensor->CopyPose(pose);
-	rgb_sensor->CopyIntrinsics(intrinsics);
-	rgb_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
-	rgb_sensor->CopyRadialTangentialDistortion(distortion);
+
+	rgb_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / rgb_sensor->Width;
+	rgb_sensor->Intrinsics[1] = f[sensor_name]["intrinsics"]["data"][1].as<float>() / rgb_sensor->Height;
+	rgb_sensor->Intrinsics[2] = f[sensor_name]["intrinsics"]["data"][2].as<float>() / rgb_sensor->Width;
+	rgb_sensor->Intrinsics[3] = f[sensor_name]["intrinsics"]["data"][3].as<float>() / rgb_sensor->Height;
+
+	if (f[sensor_name]["distortion_model"].as<std::string>() == "radial-tangential") {
+		rgb_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
+		rgb_sensor->RadialTangentialDistortion[0] = f[sensor_name]["distortion_coefficients"]["data"][0].as<float>();
+		rgb_sensor->RadialTangentialDistortion[1] = f[sensor_name]["distortion_coefficients"]["data"][1].as<float>();
+		rgb_sensor->RadialTangentialDistortion[2] = f[sensor_name]["distortion_coefficients"]["data"][2].as<float>();
+		rgb_sensor->RadialTangentialDistortion[3] = f[sensor_name]["distortion_coefficients"]["data"][3].as<float>();
+		rgb_sensor->RadialTangentialDistortion[4] = 0;//??
+	}
 	rgb_sensor->Index =file.Sensors.size();
-	rgb_sensor->Rate = 30.0;
+	rgb_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
 	file.Sensors.AddSensor(rgb_sensor);
 
 	std::string line;
 
-	std::ifstream infile(dirname + "/" + "bgr.txt");
+	std::ifstream infile(dirname + "/" + "color.txt");
 
 	boost::smatch match;
 
@@ -209,28 +374,46 @@ bool loadLifelongSLAMRGBData(const std::string &dirname , SLAMFile &file, const 
 	return true;
 }
 
-bool loadLifelongSLAMGreyData(const std::string &dirname , SLAMFile &file, const Sensor::pose_t &pose, const CameraSensor::intrinsics_t &intrinsics, const CameraSensor::distortion_coefficients_t &distortion) {
+bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
+	std::string filename = dirname + "/sensors.yaml";
+	YAML::Node f = YAML::LoadFile(filename.c_str());
 
+	// for(int i = 0; i < 16; ++i) {
+	// 	int y = i % 4;
+	// 	int x = i / 4;
+	// 	pose(x,y) = f[sensor_name]["extrinsics"]["data"][i].as<float>();
+	// }
 	CameraSensor *grey_sensor = new CameraSensor("Grey", CameraSensor::kCameraType);
 	grey_sensor->Index = 0;
-	grey_sensor->Width = 848;
-	grey_sensor->Height = 480;
+	grey_sensor->Width = f[sensor_name]["width"].as<int>();
+	grey_sensor->Height = f[sensor_name]["height"].as<int>();
 	grey_sensor->FrameFormat = frameformat::Raster;
 	grey_sensor->PixelFormat = pixelformat::G_I_8;
 	grey_sensor->Description = "Grey";
-
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
 	grey_sensor->CopyPose(pose);
-	grey_sensor->CopyIntrinsics(intrinsics);
-	grey_sensor->CopyRadialTangentialDistortion(distortion);
-	grey_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
+
+	grey_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / grey_sensor->Width;
+	grey_sensor->Intrinsics[1] = f[sensor_name]["intrinsics"]["data"][1].as<float>() / grey_sensor->Height;
+	grey_sensor->Intrinsics[2] = f[sensor_name]["intrinsics"]["data"][2].as<float>() / grey_sensor->Width;
+	grey_sensor->Intrinsics[3] = f[sensor_name]["intrinsics"]["data"][3].as<float>() / grey_sensor->Height;
+
+	if (f[sensor_name]["distortion_model"].as<std::string>() == "radial-tangential") {
+		grey_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
+		grey_sensor->RadialTangentialDistortion[0] = f[sensor_name]["distortion_coefficients"]["data"][0].as<float>();
+		grey_sensor->RadialTangentialDistortion[1] = f[sensor_name]["distortion_coefficients"]["data"][1].as<float>();
+		grey_sensor->RadialTangentialDistortion[2] = f[sensor_name]["distortion_coefficients"]["data"][2].as<float>();
+		grey_sensor->RadialTangentialDistortion[3] = f[sensor_name]["distortion_coefficients"]["data"][3].as<float>();
+		grey_sensor->RadialTangentialDistortion[4] = 0;//??
+	}
 	grey_sensor->Index =file.Sensors.size();
-	grey_sensor->Rate = 30.0;
+	grey_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
 	file.Sensors.AddSensor(grey_sensor);
 
 	std::string line;
 
-	std::ifstream infile(dirname + "/" + "bgr.txt");
+	std::ifstream infile(dirname + "/" + "color.txt");
 
 	boost::smatch match;
 
@@ -350,11 +533,26 @@ bool loadLifelongSLAMGroundTruthData(const std::string &dirname , SLAMFile &file
 }
 
 
-bool loadLifelongSLAMAccelerometerData(const std::string &dirname , SLAMFile &file) {
+bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
+	/*  
+  double sigma_g_c;  ///< Gyroscope noise density.
+  double sigma_bg;  ///< Initial gyroscope bias.
+  double sigma_a_c;  ///< Accelerometer noise density.
+  double sigma_ba;  ///< Initial accelerometer bias
+  double sigma_gw_c; ///< Gyroscope drift noise density.
+  double sigma_aw_c; ///< Accelerometer drift noise density.
+  */
+ /*
+ acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2
+ gyr_n: 0.01         # gyroscope measurement noise standard deviation.     #0.05
+ acc_w: 0.0002         # accelerometer bias random work noise standard deviation.  #0.02
+ gyr_w: 2.0e-5       # gyroscope bias random work noise standard deviation.     #4.0e-5
+ */
 
 	AccelerometerSensor *accelerometer_sensor = new AccelerometerSensor("Accelerometer");
 	accelerometer_sensor->Index = file.Sensors.size();
 	accelerometer_sensor->Description = "AccelerometerSensor";
+	//要增加参数
 	file.Sensors.AddSensor(accelerometer_sensor);
 
 	if(!accelerometer_sensor) {
@@ -412,7 +610,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname , SLAMFile &fi
 }
 
 
-bool loadLifelongSLAMGyroData(const std::string &dirname , SLAMFile &file) {
+bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
 
 	GyroSensor *gyro_sensor = new GyroSensor("Gyro");
 	gyro_sensor->Index = file.Sensors.size();
@@ -474,7 +672,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname , SLAMFile &file) {
 	return true;
 }
 
-bool loadLifelongSLAMOdomData(const std::string &dirname , SLAMFile &file) {
+bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
 
 	OdomSensor *odom_sensor = new OdomSensor("Odom");
 	odom_sensor->Index = file.Sensors.size();
@@ -590,47 +788,14 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
 	//////  Default are freiburg1
 
-    CameraSensor::intrinsics_t intrinsics_rgb;
-	DepthSensor::intrinsics_t intrinsics_depth;
-
-	CameraSensor::distortion_coefficients_t distortion_rgb;
-	DepthSensor::distortion_coefficients_t distortion_depth;
-
 	DepthSensor::disparity_params_t disparity_params =  {0.001,0.0};
 	DepthSensor::disparity_type_t disparity_type = DepthSensor::affine_disparity;
-
-
-	// if (dirname.find("freiburg1") != std::string::npos) {
-	// 	std::cout << "This dataset is assumed to be using freiburg1." << std::endl;
-
-		for (int i = 0; i < 4; i++) {
-			intrinsics_rgb[i]   = fr1_intrinsics_rgb[i];
-			intrinsics_depth[i] = fr1_intrinsics_depth[i];
-			distortion_rgb[i]   = fr1_distortion_rgb[i];
-			distortion_depth[i] = fr1_distortion_depth[i];
-		}
-
-	// } else if (dirname.find("freiburg2") != std::string::npos) {
-	// 	std::cout << "This dataset is assumed to be using freiburg2." << std::endl;
-	// 	for (int i = 0; i < 4; i++) {
-	// 		intrinsics_rgb[i]   = fr2_intrinsics_rgb[i];
-	// 		intrinsics_depth[i] = fr2_intrinsics_depth[i];
-	// 		distortion_rgb[i]   = fr2_distortion_rgb[i];
-	// 		distortion_depth[i] = fr2_distortion_depth[i];
-	// 	}
-
-	// } else  {
-	// 	std::cout << "Camera calibration might be wrong !." << std::endl;
-	// }
-
-
-
 
 	/**
 	 * load Depth
 	 */
 
-	if(depth && !loadLifelongSLAMDepthData(dirname, slamfile,pose,intrinsics_depth,distortion_depth,disparity_params,disparity_type)) {
+	if(depth && !loadLifelongSLAMDepthData(dirname,"d400_depth_optical_frame", slamfile,disparity_params,disparity_type)) {
 		std::cout << "Error while loading LifelongSLAM depth information." << std::endl;
 		delete slamfilep;
 		return nullptr;
@@ -642,7 +807,7 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	 * load Grey
 	 */
 
-	if(grey && !loadLifelongSLAMGreyData(dirname, slamfile,pose,intrinsics_rgb,distortion_rgb)) {
+	if(grey && !loadLifelongSLAMGreyData(dirname, "d400_color_optical_frame",slamfile)) {
 		std::cout << "Error while loading LifelongSLAM Grey information." << std::endl;
 		delete slamfilep;
 		return nullptr;
@@ -654,12 +819,23 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	 * load RGB
 	 */
 
-	if(rgb && !loadLifelongSLAMRGBData(dirname, slamfile,pose,intrinsics_rgb,distortion_rgb)) {
+	if(rgb && !loadLifelongSLAMRGBData(dirname, "d400_color_optical_frame", slamfile)) {
 		std::cout << "Error while loading LifelongSLAM RGB information." << std::endl;
 		delete slamfilep;
 		return nullptr;
 
 	}
+
+		/**
+	 * load Fisheyes
+	 */
+
+	// if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye1_optical_frame", slamfile) && !loadLifelongSLAMGreyData(dirname, "t265_fisheye2_optical_frame", slamfile)) {
+	// 	std::cout << "Error while loading LifelongSLAM RGB information." << std::endl;
+	// 	delete slamfilep;
+	// 	return nullptr;
+
+	// }
 
 
 	/**
@@ -676,7 +852,7 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	/**
 	 * load Accelerometer: This one failed ???what???
 	 */
-	if(accelerometer && !loadLifelongSLAMAccelerometerData(dirname, slamfile)) {
+	if(accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "d400_accelerometer", slamfile)) {
 		std::cout << "Error while loading Accelerometer information." << std::endl;
 		delete slamfilep;
 		return nullptr;
@@ -684,14 +860,14 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	}
     //I write for gyro and odom like acc, now you tell me it failed...
 
-	if(gyro && !loadLifelongSLAMGyroData(dirname, slamfile)) {
+	if(gyro && !loadLifelongSLAMGyroData(dirname, "d400_gyroscope", slamfile)) {
 		std::cout << "Error while loading Gyro information." << std::endl;
 		delete slamfilep;
 		return nullptr;
 
 	}
 
-    if(odom && !loadLifelongSLAMOdomData(dirname, slamfile)) {
+    if(odom && !loadLifelongSLAMOdomData(dirname, "odometer", slamfile)) {
 		std::cout << "Error while loading Odom information." << std::endl;
 		delete slamfilep;
 		return nullptr;
