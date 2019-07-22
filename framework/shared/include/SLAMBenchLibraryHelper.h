@@ -28,10 +28,10 @@ class SLAMBenchLibraryHelper : public ParameterComponent {
 private :
 	std::string                        _identifier;
 	std::string                        _library_name;
-    slambench::metrics::MetricManager  _metric_manager;
+    slambench::metrics::MetricManager  _metric_manager;//
     std::ostream&				       _log_stream;
     slambench::io::InputInterface*     _input_interface;
-	slambench::outputs::OutputManager  output_manager_;
+	slambench::outputs::OutputManager  output_manager_;//
 
 public:
 	bool            (* c_sb_new_slam_configuration)(SLAMBenchLibraryHelper *) ;

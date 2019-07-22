@@ -40,7 +40,7 @@
 
 #include <iomanip>
 #include <map>
-
+#include "outputs/TrajectoryInterface.h"
 
 
 #include <dlfcn.h>
@@ -71,7 +71,7 @@ void SLAMBenchConfiguration::add_slam_library(std::string so_file, std::string i
 	}	
 	std::string libName=std::string(start);
 	libName=libName.substr(3, libName.length()-14);
-	SLAMBenchLibraryHelper * lib_ptr = new SLAMBenchLibraryHelper (identifier, libName, this->get_log_stream(),  this->GetInputInterface());
+	SLAMBenchLibraryHelper * lib_ptr = new SLAMBenchLibraryHelper(identifier, libName, this->get_log_stream(),  this->GetInputInterface_0());
 	LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_init_slam_system);
 	LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_new_slam_configuration);
 	LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_update_frame);
@@ -158,7 +158,7 @@ bool SLAMBenchConfiguration::add_input(std::string input_file) {
 		this->SetInputInterface(new slambench::io::FileStreamInputInterface(input_desc, new slambench::io::SingleFrameBufferSource()));
 	}
 
-	for (slambench::io::Sensor *sensor : this->GetInputInterface()->GetSensors()) {
+	for (slambench::io::Sensor *sensor : this->input_interface[input_interface.size()-1]->GetSensors()) {
 		GetParameterManager().AddComponent(dynamic_cast<ParameterComponent*>(&(*sensor)));
 	}
 
@@ -207,7 +207,7 @@ SLAMBenchConfiguration::SLAMBenchConfiguration () :
     	    	ParameterComponent("") , input_stream_(nullptr)  {
 
 	initialised_ = false;
-	this->input_interface = NULL;
+	this->input_interface.clear();
 	this->log_stream = NULL;
         this->slam_library_names = {};
 
@@ -254,9 +254,11 @@ void SLAMBenchConfiguration::InitGroundtruth(bool with_point_cloud) {
 		return;
 	}
 	
-	if(input_interface != nullptr) {
-		auto gt_buffering_stream = new slambench::io::GTBufferingFrameStream(input_interface->GetFrames());
+	if(input_interface.size() != 0) {
+		auto gt_buffering_stream = new slambench::io::GTBufferingFrameStream(input_frame);
 		input_stream_ = gt_buffering_stream;
+		gt_buffering_stream_ = gt_buffering_stream;
+		// gt_frames = gt_buffering_stream->GetGTFrames();
 
 		if(realtime_mode_) {
 			std::cerr << "Real time mode enabled" << std::endl;
@@ -265,7 +267,7 @@ void SLAMBenchConfiguration::InitGroundtruth(bool with_point_cloud) {
 			std::cerr << "Process every frame mode enabled" << std::endl;
 		}
 
-		GetGroundTruth().LoadGTOutputsFromSLAMFile(input_interface->GetSensors(), gt_buffering_stream->GetGTFrames(), with_point_cloud);
+		GetGroundTruth().LoadGTOutputsFromSLAMFile(input_interface[0]->GetSensors(), gt_buffering_stream->GetGTFrames(), with_point_cloud);
 	}
 	
 	auto gt_trajectory = GetGroundTruth().GetMainOutput(slambench::values::VT_POSE);
@@ -328,6 +330,9 @@ void SLAMBenchConfiguration::compute_loop_algorithm(SLAMBenchConfiguration* conf
 	bool * stay_on = &default_true;
 	bool ongoing = false;
 	if (remote_stay_on) stay_on = remote_stay_on;
+	int frame_idx = 0;
+	int count = 0;
+	slambench::io::FrameCollection* gt_frames = config->gt_buffering_stream_->GetGTFrames();
 	
 	while(*stay_on) {
 
@@ -350,11 +355,10 @@ void SLAMBenchConfiguration::compute_loop_algorithm(SLAMBenchConfiguration* conf
 			std::cerr << "No input loaded." << std::endl;
 			break;
 		}
-		
-		slambench::io::SLAMFrame * current_frame = config->input_stream_->GetNextFrame();
-
+		slambench::io::SLAMFrame *current_frame = config->input_stream_->GetNextFrame();
 		if (current_frame == nullptr) {
 			std::cerr << "Last frame processed." << std::endl;
+			std::cout<<"frame processed:"<<frame_idx<<std::endl;
 			break;
 		}
 
@@ -368,7 +372,7 @@ void SLAMBenchConfiguration::compute_loop_algorithm(SLAMBenchConfiguration* conf
 		// ********* [[ NEW FRAME PROCESSED BY ALGO ]] *********
 
 		for (auto lib : config->slam_libs) {
-
+	
 
 			// ********* [[ SEND THE FRAME ]] *********
 			ongoing=not lib->c_sb_update_frame(lib,current_frame);
@@ -381,13 +385,13 @@ void SLAMBenchConfiguration::compute_loop_algorithm(SLAMBenchConfiguration* conf
 			// ********* [[ PROCESS ALGO START ]] *********
 			lib->GetMetricManager().BeginFrame();
 			
-
+		
 
 			if (not lib->c_sb_process_once (lib)) {
 				std::cerr <<"Error after lib->c_sb_process_once." << std::endl;
 				exit(1);
 			}
-			
+
 			slambench::TimeStamp ts = current_frame->Timestamp;
 			if(!lib->c_sb_update_outputs(lib, &ts)) {
 				std::cerr << "Failed to get outputs" << std::endl;
@@ -397,7 +401,7 @@ void SLAMBenchConfiguration::compute_loop_algorithm(SLAMBenchConfiguration* conf
 			lib->GetMetricManager().EndFrame();
 
 		}
-
+		
 
 
 		// ********* [[ FINALIZE ]] *********
@@ -439,6 +443,20 @@ void SLAMBenchConfiguration::CleanAlgorithms()
 			exit(1);
 		} else {
 			std::cerr << "Algorithm cleaning succeed." << std::endl;
+		}
+	}
+}
+
+
+void SLAMBenchConfiguration::print_libs_traj()
+{
+/******************************************/
+	for (auto lib : slam_libs) {
+		auto lib_traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
+		slambench::outputs::PoseOutputTrajectoryInterface traj_int(lib_traj);
+		for (auto past_point : traj_int.GetAll()) {
+			std::cout <<"traj_int(lib_traj):"<< past_point.second.GetValue() << std::endl;//no problem
+			return;
 		}
 	}
 }

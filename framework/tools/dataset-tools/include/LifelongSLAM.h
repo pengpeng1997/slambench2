@@ -25,11 +25,12 @@ private :
    	
 
 	// I took those numbers from the TUM dataset paper
-	static constexpr CameraSensor::intrinsics_t fr1_intrinsics_rgb   = { 0.80828125, 1.076041667, 0.4978125, 0.531875 };
-	static constexpr DepthSensor::intrinsics_t  fr1_intrinsics_depth = { 0.92359375, 1.229375,    0.5171875, 0.4875   };
-	static constexpr CameraSensor::intrinsics_t fr2_intrinsics_rgb   = { 0.81390624, 1.085416667, 0.5079687, 0.52020  };
-	static constexpr DepthSensor::intrinsics_t  fr2_intrinsics_depth = { 0.9075,     1.212083333, 0.4825,    0.52708  };
-
+	//static constexpr CameraSensor::intrinsics_t fr1_intrinsics_rgb   = { 0.80828125, 1.076041667, 0.4978125, 0.531875 };
+	//static constexpr DepthSensor::intrinsics_t  fr1_intrinsics_depth = { 0.92359375, 1.229375,    0.5171875, 0.4875   };
+	static constexpr CameraSensor::intrinsics_t fr2_intrinsics_rgb   = {0.7210506943036925, 0.902508290608724, 0.7210916483177329, 0.5197354634602864};
+	static constexpr DepthSensor::intrinsics_t  fr2_intrinsics_depth = {0.49781097556060216, 0.8896006902058919,  0.49781097556060216, 0.5108768781026204};
+	static constexpr CameraSensor::intrinsics_t fr1_intrinsics_rgb   = {0.9799446625, 1.3110521729166666, 0.5060022234375, 0.53062055};
+	static constexpr DepthSensor::intrinsics_t  fr1_intrinsics_depth = {0.9799446625, 1.3110521729166666, 0.5060022234375, 0.53062055};
 
 	// I took those numbers from ORBSLAM2 examples
 
@@ -44,17 +45,18 @@ private :
 	static constexpr float fr2_DepthMapFactor =  5208.0 ;
 
 
-	static constexpr CameraSensor::distortion_coefficients_t fr1_distortion_rgb   = { 0.262383 ,	 -0.953104,	 -0.005358,	 0.002628 ,	 1.163314  };
-	static constexpr CameraSensor::distortion_coefficients_t fr2_distortion_rgb   = { 0.231222  ,	 -0.784899 , -0.003257 , -0.000105 , 0.917205    };
+	//static constexpr CameraSensor::distortion_coefficients_t fr1_distortion_rgb   = { 0.262383 ,	 -0.953104,	 -0.005358,	 0.002628 ,	 1.163314  };
+	static constexpr CameraSensor::distortion_coefficients_t fr2_distortion_rgb   = { 0.0, 0.0, 0.0, 0.0, 0.0 };
 
-	static constexpr DepthSensor::distortion_coefficients_t  fr1_distortion_depth = { 0.262383,	 -0.953104,	 -0.005358,	 0.002628, 	 1.163314   };
-	static constexpr DepthSensor::distortion_coefficients_t  fr2_distortion_depth = {  0.231222  ,	 -0.784899 , -0.003257 , -0.000105 , 0.917205  };
+	//static constexpr DepthSensor::distortion_coefficients_t  fr1_distortion_depth = { 0.262383,	 -0.953104,	 -0.005358,	 0.002628, 	 1.163314   };
+	static constexpr DepthSensor::distortion_coefficients_t  fr2_distortion_depth = {  0.0, 0.0, 0.0, 0.0, 0.0};
 
-
-
+	static constexpr CameraSensor::distortion_coefficients_t fr1_distortion_rgb   = { 0.096471, -0.112393, -0.000752, 0.003361, 0.000000  };
+	static constexpr DepthSensor::distortion_coefficients_t  fr1_distortion_depth = { 0.096471, -0.112393, -0.000752, 0.003361, 0.000000  };
+	
 public :
 	std::string input;
-	bool rgb = true, depth = true, gt = true, accelerometer = true, gyro = true, odom = true, grey = true;
+	bool rgb = true, depth = true, gt = true, accelerometer = false, gyro = false, odom = false, grey = true;
 
 	LifelongSLAMReader(std::string name) : DatasetReader(name) {
 

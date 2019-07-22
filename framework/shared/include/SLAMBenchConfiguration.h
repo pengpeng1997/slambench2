@@ -69,8 +69,12 @@ private :
     unsigned int frame_limit;
 	
 	slambench::io::FrameStream *input_stream_;
+	slambench::io::GTBufferingFrameStream* gt_buffering_stream_;
+	
     
-    slambench::io::InputInterface* input_interface;
+    std::vector<slambench::io::InputInterface*> input_interface;
+	std::vector<slambench::io::FrameStream *> input_frame;
+	std::vector<slambench::io::SensorCollection> input_sensors;
 	slambench::ParameterManager param_manager_;
 	
 	slambench::outputs::OutputManager ground_truth_;
@@ -117,20 +121,29 @@ public :
     void                 set_log_file      (std::string f);
 
 public :
-	slambench::io::InputInterface *GetInputInterface() {
-		if(input_interface == nullptr) {
+	std::vector<slambench::io::InputInterface*> GetInputInterface() {
+		if(input_interface.empty()) {
 			throw std::logic_error("Input interface has not been added to SLAM configuration");
 		}
 		return input_interface;
 	}
+
+	slambench::io::InputInterface* GetInputInterface_0() {
+		if(input_interface.empty()) {
+			throw std::logic_error("Input interface has not been added to SLAM configuration");
+		}
+		return input_interface[0];
+	}
 	const slambench::io::SensorCollection &GetSensors() {
 
-		return this->GetInputInterface()->GetSensors();
+		return this->GetInputInterface_0()->GetSensors();
 
 	}
 
 	void SetInputInterface(slambench::io::InputInterface *input_ref) {
-		input_interface = input_ref;
+		input_interface.push_back(input_ref);
+		input_frame.push_back(&input_ref->GetFrames());
+		input_sensors.push_back(input_ref->GetSensors());
 	}
 
     inline std::ostream& get_log_stream() {if (!log_stream)  update_log_stream(); return *log_stream;};
@@ -151,7 +164,7 @@ public :
 
     void print_arguments() ;
     void print_dse();
-
+	void print_libs_traj();
 
 };
 

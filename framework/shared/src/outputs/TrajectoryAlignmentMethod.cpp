@@ -61,7 +61,7 @@ static boost::optional<slambench::TimeStamp> select_closest_before (const Trajec
 
 Eigen::Matrix4f align_trajectories_original (const TrajectoryAlignmentMethod::trajectory_t & gt , const TrajectoryAlignmentMethod::trajectory_t & t) {
 
-	Eigen::Matrix4f res = Eigen::Matrix4f::Identity();
+    Eigen::Matrix4f res = Eigen::Matrix4f::Identity();
 
 	if (gt.size() != 0 and t.size() != 0){
 
@@ -71,7 +71,7 @@ Eigen::Matrix4f align_trajectories_original (const TrajectoryAlignmentMethod::tr
 
 				res = ((gt.at(closest.get()))).GetValue() * past_point.second.GetValue().inverse();
 				//std::cout << res << std::endl;
-				return res ;
+                return res ;
 			}
 		}
 

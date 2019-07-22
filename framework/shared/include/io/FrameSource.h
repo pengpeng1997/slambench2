@@ -62,24 +62,31 @@ namespace slambench {
 				virtual ~GTFrameCollection();
 				
 				unsigned int GetFrameCount() override;
-				SLAMFrame* GetFrame(unsigned int index) override;
-				private:
+				SLAMFrame* GetFrame(unsigned int index) override;		
+			private:
 					GTBufferingFrameStream &gt_stream_;
 			};
 			
-			GTBufferingFrameStream(FrameStream &base_stream);
+			// GTBufferingFrameStream(FrameStream &base_stream);
+			GTBufferingFrameStream(std::vector<FrameStream *> base_streams);
 			virtual ~GTBufferingFrameStream();
 			
 			SLAMFrame* GetNextFrame() override;
+			SLAMFrame* baseGetNextFrame();
 			bool HasNextFrame() override;
+			FrameCollection *GetGTFrames();	
 
-			FrameCollection *GetGTFrames();
 		private:
-			void fastForward();
 			
-			FrameStream &base_stream_;
+			//FrameStream &base_stream_;
+			std::vector<FrameStream *> base_streams_;
 			SLAMFrame *buffered_frame_;
+			SLAMFrame *next_frame_;
 			std::vector<SLAMFrame*> gt_frames_;
+			std::map<std::string, Sensor *> FrameSensors;
+			void fastForward();
+			int index = 0;
+			int count = 0;
 		};
 		
 		/**

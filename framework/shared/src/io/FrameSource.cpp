@@ -59,11 +59,18 @@ unsigned int GTBufferingFrameStream::GTFrameCollection::GetFrameCount()
 	return gt_stream_.gt_frames_.size();
 }
 
-GTBufferingFrameStream::GTBufferingFrameStream(FrameStream& base_stream) : base_stream_(base_stream), buffered_frame_(nullptr)
+
+
+// GTBufferingFrameStream::GTBufferingFrameStream(FrameStream& base_stream) : base_stream_(base_stream), buffered_frame_(nullptr)
+// {
+// 	fastForward();
+// }
+
+GTBufferingFrameStream::GTBufferingFrameStream(std::vector<FrameStream *> base_streams) : base_streams_(base_streams), buffered_frame_(nullptr)
 {
+	FrameSensors.clear();
 	fastForward();
 }
-
 
 GTBufferingFrameStream::~GTBufferingFrameStream()
 {
@@ -78,13 +85,58 @@ SLAMFrame* GTBufferingFrameStream::GetNextFrame()
 		return frame;
 	}
 	
-	return base_stream_.GetNextFrame();
+	return this->baseGetNextFrame();
+}
+
+SLAMFrame* GTBufferingFrameStream::baseGetNextFrame()
+{
+	if (index >= base_streams_.size()) {
+		std::cout<<"base_streams_ index error!"<<std::endl;
+		std::cout<<index<<std::endl;
+		index = 0;// index should be reset.
+	}
+
+	// if (!base_streams_[index]->HasNextFrame()) {
+	// 	index++;
+	// } 
+	
+	if (index < base_streams_.size()) {
+		SLAMFrame *temp = base_streams_[index]->GetNextFrame();
+		
+		if ((temp==nullptr)&&((index+1) < base_streams_.size())) {
+			index++;// to the next .slam file
+			temp = base_streams_[index]->GetNextFrame();
+		}
+		if (temp != nullptr) {// reset the Sensor
+			if (FrameSensors.count(temp->FrameSensor->GetName()) == 0) {
+				FrameSensors[temp->FrameSensor->GetName()] = temp->FrameSensor;
+			} else {
+				temp->FrameSensor = FrameSensors[temp->FrameSensor->GetName()];
+			}
+		}
+		 //std::cout<<"temp:"<<temp->_file<<std::endl;
+		return temp;
+	} else {
+		std::cout<<"index >= base_streams_.size(), return nullptr."<<std::endl;
+		return nullptr;
+	}
 }
 
 bool GTBufferingFrameStream::HasNextFrame()
 {
-	return base_stream_.HasNextFrame() || buffered_frame_ != nullptr;
+	if (index < base_streams_.size() - 1) {
+		return true;
+	} else if (index == base_streams_.size() - 1) {
+	    return base_streams_[base_streams_.size() - 1]->HasNextFrame() || buffered_frame_ != nullptr;
+	} else {
+		return false;
+	}
 }
+
+// bool GTBufferingFrameStream::baseHasNextFrame()
+// {
+// 	return base_streams_[base_streams_.size() - 1]->HasNextFrame() || buffered_frame_ != nullptr;
+// }
 
 FrameCollection* GTBufferingFrameStream::GetGTFrames()
 {
@@ -95,24 +147,39 @@ FrameCollection* GTBufferingFrameStream::GetGTFrames()
 void GTBufferingFrameStream::fastForward()
 {
 	assert(gt_frames_.empty());
-	
+	std::cout<<"gt_frames_ size():"<<gt_frames_.size()<<std::endl;
 	SLAMFrame *next_frame = nullptr;
 	while(true) {
-		if(!base_stream_.HasNextFrame()) {
+		if(!this->HasNextFrame()) {
+			std::cout<<"*****************!this->HasNextFrame()*****************"<<std::endl;
+			std::cout<<"index:"<<index<<std::endl;
+			std::cout<<"gt_frames_ size():"<<gt_frames_.size()<<std::endl;
 			break;
 		}
-		next_frame = base_stream_.GetNextFrame();
+		next_frame = this->GetNextFrame();
+
 		if(next_frame == nullptr) {
+			std::cout<<"*****************next_frame == nullptr*****************"<<std::endl;
+			std::cout<<"index:"<<index<<std::endl;
+			std::cout<<"gt_frames_ size():"<<gt_frames_.size()<<std::endl;
 			break;
 		}
 		
 		if(!next_frame->FrameSensor->IsGroundTruth()) {
-			break;
+			index++;
+			if (index >= base_streams_.size()){
+				std::cout<<"*****************!next_frame->FrameSensor->IsGroundTruth()*****************"<<std::endl;
+				std::cout<<"index:"<<index<<std::endl;
+				std::cout<<"gt_frames_ size():"<<gt_frames_.size()<<std::endl;
+				index = 0;
+				break;
+			}
 		}
 		
 		gt_frames_.push_back(next_frame);
 	}
-	
+
+	std::cout<<"gt_frames_ size():"<<gt_frames_.size()<<std::endl;
 	buffered_frame_ = next_frame;
 }
 

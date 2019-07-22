@@ -93,7 +93,7 @@ void OutputManager::LoadGTOutputsFromSLAMFile(io::SensorCollection& sensors, io:
 			RegisterOutput(output);
 		}
 	}
-		
+
 	for(unsigned frame_idx = 0; frame_idx < gt_frames->GetFrameCount(); ++frame_idx) {
 
 		auto i = gt_frames->GetFrame(frame_idx);
@@ -102,32 +102,33 @@ void OutputManager::LoadGTOutputsFromSLAMFile(io::SensorCollection& sensors, io:
 			continue;
 		}
 
-		auto output = gt_outputs.at(i->FrameSensor);
+		auto output = gt_outputs.at(i->FrameSensor);//(i->FrameSensor);
 
 		if (i->FrameSensor->GetType() == slambench::io::GroundTruthSensor::kGroundTruthTrajectoryType) {
-
+			//i->FrameSensor = first->FrameSensor;
 			Eigen::Matrix4f K;
 			memcpy(K.data(), i->GetData(), i->GetSize());
 
 			i->FreeData();
 			
 			output->AddPoint(i->Timestamp, new slambench::values::PoseValue(K));
+			// std::cout<<"successfully added:"<<frame_idx<<std::endl;
 		}
 
 
 
-		if (with_point_cloud and i->FrameSensor->GetType() == slambench::io::PointCloudSensor::kPointCloudType) {
+		// if (with_point_cloud and i->FrameSensor->GetType() == slambench::io::PointCloudSensor::kPointCloudType) {
 			
-			slambench::io::PointCloud *pc = slambench::io::PointCloud::FromRaw((char*)i->GetData());
-			i->FreeData();
+		// 	slambench::io::PointCloud *pc = slambench::io::PointCloud::FromRaw((char*)i->GetData());
+		// 	i->FreeData();
 			
-			slambench::values::PointCloudValue *pcv = new slambench::values::PointCloudValue();
-			for(auto p : pc->Get()) {
-				pcv->AddPoint({p.x,p.y,p.z});
-			}
-			delete pc;
-			output->AddPoint(i->Timestamp, pcv);
-		}
+		// 	slambench::values::PointCloudValue *pcv = new slambench::values::PointCloudValue();
+		// 	for(auto p : pc->Get()) {
+		// 		pcv->AddPoint({p.x,p.y,p.z});
+		// 	}
+		// 	delete pc;
+		// 	output->AddPoint(i->Timestamp, pcv);
+		// }
 
 	}
 }
