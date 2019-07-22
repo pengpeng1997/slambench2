@@ -60,3 +60,4 @@ paper/*.tex
 # Datasets
 
 /datasets
+.vscode/
