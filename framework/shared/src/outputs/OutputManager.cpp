@@ -29,6 +29,9 @@ OutputManager::~OutputManager()
 
 BaseOutput* OutputManager::GetOutput(const std::string& outputname)
 {
+	for(auto i : output_map_) {
+		std::cout<< i.first <<std::endl;
+	}
 	return output_map_.at(outputname);
 }
 

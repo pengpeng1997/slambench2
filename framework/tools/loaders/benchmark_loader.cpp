@@ -17,6 +17,12 @@
 #include "../../shared/include/metrics/MemoryMetric.h"
 #include "ColumnWriter.h"
 #include <SLAMBenchException.h>
+#include <sys/time.h>
+#include <cstdlib>  
+#include <cstdio>
+#include <ctime>
+#include <cmath>
+#include <unistd.h>
 
 
 std::string default_output_filename;
@@ -167,33 +173,60 @@ int main(int argc, char * argv[])
 
 		// TODO: Only one output file does not do the job for more than one SLAM systems, output directory maybe ?
 
-		SLAMBenchLibraryHelper *main_lib = nullptr;
+		// SLAMBenchLibraryHelper *main_lib = nullptr;
 
-		if(output_filename != "" && config->GetLoadedLibs().size() > 1) {
-			std::cerr << "Can only write outputs to file when there is only one lib loaded" << std::endl;
-			return 1;
-		} else if(output_filename != "") {
-			// enable all writeable outputs
-			SLAMBenchLibraryHelper *lib = config->GetLoadedLibs().front();
-			main_lib = lib;
+		// if(output_filename != "" && config->GetLoadedLibs().size() > 1) {
+		// 	std::cerr << "Can only write outputs to file when there is only one lib loaded" << std::endl;
+		// 	return 1;
+		// } else if(output_filename != "") {
+		// 	// enable all writeable outputs
+		// 	SLAMBenchLibraryHelper *lib = config->GetLoadedLibs().front();
+		// 	main_lib = lib;
 
-			lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->SetActive(true);
-		}
+		// 	lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->SetActive(true);
+		// }
 
 
+		// if(output_filename != "") {
+		// 	slambench::TimeStamp timestamp = main_lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->GetMostRecentValue().first;
+		// 	main_lib->GetOutputManager().GetMainOutput(slambench::values::VT_POINTCLOUD)->SetActive(true);
+		// 	main_lib->c_sb_update_outputs(main_lib, &timestamp);
+
+		// 	std::cout << "Writing outputs to " << output_filename << std::endl;
+		// 	slambench::outputs::OutputManagerWriter omw;
+		// 	SLAMBenchLibraryHelper *lib = *config->GetLoadedLibs().begin();
+
+		// 	omw.Write(lib->GetOutputManager(), output_filename);
+		// 	std::cout << "Done writing outputs." << std::endl;
+		// }
+		/************************************ pengpeng output *******************************/
 		if(output_filename != "") {
-			slambench::TimeStamp timestamp = main_lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->GetMostRecentValue().first;
-			main_lib->GetOutputManager().GetMainOutput(slambench::values::VT_POINTCLOUD)->SetActive(true);
-			main_lib->c_sb_update_outputs(main_lib, &timestamp);
-
-			std::cout << "Writing outputs to " << output_filename << std::endl;
-			slambench::outputs::OutputManagerWriter omw;
-			SLAMBenchLibraryHelper *lib = *config->GetLoadedLibs().begin();
-
-			omw.Write(lib->GetOutputManager(), output_filename);
-			std::cout << "Done writing outputs." << std::endl;
+			std::cout<<"output!"<<output_filename<<std::endl;
+			float x, y, z;
+			Eigen::Matrix3d R;
+			struct timeval tv;  
+			for(SLAMBenchLibraryHelper *lib : config->GetLoadedLibs()) {
+				std::ofstream OutFile(lib->get_library_name() + "_" + output_filename);
+				std::cout<<"output file:"<<lib->get_library_name() + "_" + output_filename<<std::endl;
+   				OutFile << "#DatasetTimestamp, ProcessTimestamp, position.x, y, z, quaterniond.x, y, z, w"<<std::endl;	
+				auto output = lib->GetOutputManager().GetOutput("Pose")->GetValues();
+				for (auto it = output.begin(); it != output.end(); ++it ) {
+					for (int i = 0; i < 3; i++) {
+						for (int j = 0; j < 3; j++) {
+							R(i, j) = it->second->GetPoseValue()(i, j);
+						}
+					}
+					Eigen::Quaterniond q = Eigen::Quaterniond(R);
+    				q.normalize();
+					x = it->second->GetPoseValue()(0, 3);
+					y = it->second->GetPoseValue()(1, 3);
+					z = it->second->GetPoseValue()(2, 3);
+					gettimeofday(&tv,NULL); 
+					OutFile<<it->first<<" "<<tv.tv_sec<<"."<<tv.tv_usec<<" "<<x<<" "<<y<<" "<<z<<" "<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<std::endl;
+				}
+				OutFile.close();
+			}
 		}
-
 
 		std::cout << "End of program." << std::endl;
 
