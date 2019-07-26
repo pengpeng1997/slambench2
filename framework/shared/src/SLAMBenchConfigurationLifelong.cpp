@@ -151,9 +151,9 @@ SLAMBenchConfigurationLifelong::SLAMBenchConfigurationLifelong() : SLAMBenchConf
 
 void SLAMBenchConfigurationLifelong::InitGroundtruth(bool with_point_cloud) {
 
-    if(initialised_) {
-        return;
-    }
+    // if(initialised_) {
+    //     return;
+    // }
     auto interface = GetCurrentInputInterface();
     if(interface != nullptr) {
         auto gt_buffering_stream = new slambench::io::GTBufferingFrameStream(interface->GetFrames());
