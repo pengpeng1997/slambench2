@@ -14,6 +14,15 @@
 
 #include <SLAMBenchLibraryHelperLifelong.h>
 #include "SLAMBenchConfiguration.h"
+#include <metrics/ATEMetric.h>
+#include <metrics/RPEMetric.h>
+#include <outputs/TrajectoryAlignmentMethod.h>
+#include <outputs/OutputManagerWriter.h>
+#include <metrics/DurationMetric.h>
+#include <metrics/PowerMetric.h>
+#include <metrics/MemoryMetric.h>
+#include "ColumnWriter.h"
+#include <SLAMBenchException.h>
 
 
 
@@ -22,11 +31,19 @@ public:
     SLAMBenchConfigurationLifelong();
 
 private :
-
+    slambench::RowNumberColumn row_number;
+    slambench::ColumnWriter *cw = nullptr;
+    slambench::metrics::MemoryMetric* memory_metric = nullptr;
+	slambench::metrics::DurationMetric* duration_metric = nullptr;
+	slambench::metrics::PowerMetric* power_metric = nullptr;
+    
+    bool cw_initialised_ = false;
     std::vector<slambench::io::InputInterface*> input_interfaces;
 
 public :
 
+    std::string alignment_technique_ = "original";
+    void init_cw();
 	static void compute_loop_algorithm(SLAMBenchConfiguration* config, bool *stay_on, SLAMBenchUI *ui);
     void InitGroundtruth(bool with_point_cloud = true);
     bool add_input(std::string input_file);

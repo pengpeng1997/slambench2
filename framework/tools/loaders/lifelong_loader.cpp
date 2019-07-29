@@ -55,34 +55,13 @@ int main(int argc, char * argv[])
 
 		config->InitGroundtruth(false);
 
-		// get GT trajectory
-		auto gt_traj = config->GetGroundTruth().GetMainOutput(slambench::values::VT_POSE);
-
-		slambench::outputs::TrajectoryAlignmentMethod *alignment_method;
-		if(alignment_technique == "original") {
-			alignment_method = new slambench::outputs::OriginalTrajectoryAlignmentMethod();
-		} else if(alignment_technique == "new") {
-			alignment_method = new slambench::outputs::NewTrajectoryAlignmentMethod();
-		} else {
-		std::cerr << "Unknown alignment method " << alignment_technique << std::endl;
-			return 1;
-		}
 
 		//***************************************************************************************
 		// We prepare the logging and create the global metrics
 		//***************************************************************************************
 
 		config->start_statistics();
-		slambench::ColumnWriter cw (config->get_log_stream(), "\t");
-		slambench::RowNumberColumn row_number;
-		cw.AddColumn(&row_number);
-
-
-
-		auto memory_metric   = new slambench::metrics::MemoryMetric();
-		auto duration_metric = new slambench::metrics::DurationMetric();
-		auto power_metric    = new slambench::metrics::PowerMetric();
-
+	
 		//***************************************************************************************
 		// We init the algos now because we need their output already
 		// TODO: if pose and map were by default we could init the algo much later,
@@ -90,72 +69,11 @@ int main(int argc, char * argv[])
 		//***************************************************************************************
 
 		config->InitAlgorithms();
+		config->alignment_technique_ = alignment_technique;
+		config->init_cw();
+		
 
-		bool have_timestamp = false;
-
-		for(SLAMBenchLibraryHelper *lib : config->GetLoadedLibs()) {
-
-			// retrieve the trajectory of the lib
-			auto lib_traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
-			if (lib_traj == nullptr) {
-				std::cerr << "There is no output trajectory in the library outputs." << std::endl;
-				exit(1);
-			}
-
-			// Create timestamp column if we don't have one
-			if(!have_timestamp) {
-				have_timestamp = true;
-				cw.AddColumn(new slambench::OutputTimestampColumnInterface(lib_traj));
-			}
-
-			if (gt_traj) {
-				// Create an aligned trajectory
-				auto alignment = new slambench::outputs::AlignmentOutput("Alignment", new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj), lib_traj, alignment_method);
-				alignment->SetActive(true);
-				alignment->SetKeepOnlyMostRecent(true);
-				auto aligned = new slambench::outputs::AlignedPoseOutput(lib_traj->GetName() + " (Aligned)", alignment, lib_traj);
-
-				// Add ATE metric
-				auto ate_metric = new slambench::metrics::ATEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
-				if (ate_metric->GetValueDescription().GetStructureDescription().size() > 0) {
-					lib->GetMetricManager().AddFrameMetric(ate_metric);
-					cw.AddColumn(new slambench::CollectionValueLibColumnInterface(lib, ate_metric, lib->GetMetricManager().GetFramePhase()));
-				}
-
-				// Add RPE metric
-				auto rpe_metric = new slambench::metrics::RPEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
-				lib->GetMetricManager().AddFrameMetric(rpe_metric);
-				cw.AddColumn(new slambench::CollectionValueLibColumnInterface(lib, rpe_metric, lib->GetMetricManager().GetFramePhase()));
-			}
-			// Add a duration metric
-			lib->GetMetricManager().AddFrameMetric(duration_metric);
-			lib->GetMetricManager().AddPhaseMetric(duration_metric);
-			cw.AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
-			for(auto phase : lib->GetMetricManager().GetPhases()) {
-				cw.AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, phase));
-			}
-
-			// Add a memory metric
-			lib->GetMetricManager().AddFrameMetric(memory_metric);
-			cw.AddColumn(new slambench::CollectionValueLibColumnInterface(lib, memory_metric, lib->GetMetricManager().GetFramePhase()));
-
-			// Add a power metric if it makes sense
-			if (power_metric->GetValueDescription().GetStructureDescription().size() > 0) {
-				lib->GetMetricManager().AddFrameMetric(power_metric);
-				cw.AddColumn(new slambench::CollectionValueLibColumnInterface(lib, power_metric, lib->GetMetricManager().GetFramePhase()));
-			}
-
-			// Add XYZ row from the trajectory
-			auto traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
-			traj->SetActive(true);
-			cw.AddColumn(new slambench::CollectionValueLibColumnInterface(lib, new slambench::outputs::PoseToXYZOutput(traj)));
-
-		}
-
-
-		config->AddFrameCallback([&cw]{cw.PrintRow();}); // @suppress("Invalid arguments")
-		cw.PrintHeader();
-
+	
 		//***************************************************************************************
 		// We run the experiment
 		//***************************************************************************************
@@ -199,11 +117,6 @@ int main(int argc, char * argv[])
 		std::cout << "End of program." << std::endl;
 
 		delete config;
-		delete alignment_method;
-
-		delete memory_metric;
-		delete duration_metric;
-		delete power_metric;
 
 
 	} catch (const SLAMBenchException& e) {

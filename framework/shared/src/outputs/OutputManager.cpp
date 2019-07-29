@@ -47,6 +47,8 @@ void OutputManager::RegisterOutput(BaseOutput* output)
 {
 	assert(output != nullptr);
 	if(output->IsMainOutput() && GetMainOutput(output->GetType())) {
+		delete output_map_[output->GetName()];
+		output_map_.erase(output->GetName());
 		// throw std::logic_error("A main output for this type is already registered");
 	}
 	
