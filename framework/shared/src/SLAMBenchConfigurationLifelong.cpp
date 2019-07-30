@@ -374,6 +374,10 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 		// duration_metric = new slambench::metrics::DurationMetric();
 		// power_metric    = new slambench::metrics::PowerMetric();
     		for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
+                if (cw_initialised_) { 
+                    lib->GetMetricManager().reset();
+                    lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->reset();
+                }
 
 			// retrieve the trajectory of the lib
 			auto lib_traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);

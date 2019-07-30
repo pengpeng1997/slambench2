@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+
 namespace slambench {
 	namespace metrics {
 		
@@ -61,6 +62,30 @@ namespace slambench {
 
 			void BeginInit();
 			void EndInit();
+
+			void reset() {
+				// for(auto i : all_metrics_) {
+				// 	delete i;
+				// }
+				// for(auto i : frame_data_) {
+				// 	delete i;
+				// }
+				// for(auto i : frame_metrics_) {
+				// 	delete i;
+				// }
+				// for(auto i : phase_metrics_) {
+				// 	delete i;
+				// }
+				// for(auto i : phases_) {
+				// 	delete i;
+				// }
+				all_metrics_.clear();
+				frame_data_.clear();
+				frame_metrics_.clear();
+				phase_metrics_.clear();
+				phases_.clear();
+			}
+
 		private:
 			metric_list_t frame_metrics_;
 			metric_list_t phase_metrics_;
