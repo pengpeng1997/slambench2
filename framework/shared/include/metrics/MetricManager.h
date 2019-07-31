@@ -83,7 +83,7 @@ namespace slambench {
 				frame_data_.clear();
 				frame_metrics_.clear();
 				phase_metrics_.clear();
-				phases_.clear();
+				// phases_.clear();
 			}
 
 		private:

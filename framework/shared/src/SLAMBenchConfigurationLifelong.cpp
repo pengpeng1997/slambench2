@@ -346,9 +346,9 @@ void SLAMBenchConfigurationLifelong::LoadNextInputInterface() {
 void SLAMBenchConfigurationLifelong::init_cw() {
 
     if (cw_initialised_) { 
-        // delete memory_metric;
-		// delete duration_metric;
-		// delete power_metric;
+        delete memory_metric;
+		delete duration_metric;
+		delete power_metric;
         delete cw; 
         cw = nullptr;
         memory_metric = nullptr;
@@ -370,9 +370,9 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 		// slambench::RowNumberColumn row_number;
 		cw->AddColumn(&(this->row_number));
         bool have_timestamp = false;
-		// memory_metric   = new slambench::metrics::MemoryMetric();
-		// duration_metric = new slambench::metrics::DurationMetric();
-		// power_metric    = new slambench::metrics::PowerMetric();
+		memory_metric   = new slambench::metrics::MemoryMetric();
+		duration_metric = new slambench::metrics::DurationMetric();
+		power_metric    = new slambench::metrics::PowerMetric();
     		for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
                 if (cw_initialised_) { 
                     lib->GetMetricManager().reset();
@@ -412,22 +412,22 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 				cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, rpe_metric, lib->GetMetricManager().GetFramePhase()));
 			}
 			// Add a duration metric
-			// lib->GetMetricManager().AddFrameMetric(duration_metric);
-			// lib->GetMetricManager().AddPhaseMetric(duration_metric);
-			// cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
-			// for(auto phase : lib->GetMetricManager().GetPhases()) {
-			// 	cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, phase));
-			// }
+			lib->GetMetricManager().AddFrameMetric(duration_metric);
+			lib->GetMetricManager().AddPhaseMetric(duration_metric);
+			cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
+			for(auto phase : lib->GetMetricManager().GetPhases()) {
+				cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, phase));
+			}
 
-			// // Add a memory metric
-			// lib->GetMetricManager().AddFrameMetric(memory_metric);
-			// cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, memory_metric, lib->GetMetricManager().GetFramePhase()));
+			// Add a memory metric
+			lib->GetMetricManager().AddFrameMetric(memory_metric);
+			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, memory_metric, lib->GetMetricManager().GetFramePhase()));
 
-			// // Add a power metric if it makes sense
-			// if (power_metric->GetValueDescription().GetStructureDescription().size() > 0) {
-			// 	lib->GetMetricManager().AddFrameMetric(power_metric);
-			// 	cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, power_metric, lib->GetMetricManager().GetFramePhase()));
-			// }
+			// Add a power metric if it makes sense
+			if (power_metric->GetValueDescription().GetStructureDescription().size() > 0) {
+				lib->GetMetricManager().AddFrameMetric(power_metric);
+				cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, power_metric, lib->GetMetricManager().GetFramePhase()));
+			}
 
 			// Add XYZ row from the trajectory
 			auto traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
