@@ -458,14 +458,14 @@ void SLAMBenchConfigurationLifelong::OutputToTxt()
 		for (auto it = output.begin(); it != output.end(); ++it ) {
 			for (int i = 0; i < 3; i++) {
 				for (int j = 0; j < 3; j++) {
-					R(i, j) = it->second->GetPoseValue()(i, j);
+					R(i, j) = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(i, j);
 				}
 			}
 			Eigen::Quaterniond q = Eigen::Quaterniond(R);
     		q.normalize();
-			x = it->second->GetPoseValue()(0, 3);
-			y = it->second->GetPoseValue()(1, 3);
-			z = it->second->GetPoseValue()(2, 3);
+			x = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(0, 3);
+			y = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(1, 3);
+			z = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(2, 3);
 			gettimeofday(&tv,NULL); 
 			OutFile<<it->first<<" "<<tv.tv_sec<<"."<<tv.tv_usec<<" "<<x<<" "<<y<<" "<<z<<" "<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<std::endl;
 		}

@@ -88,7 +88,7 @@ namespace slambench {
 			
 			void Dispatch(ValueDispatch *vd);
 			void Dispatch(ConstValueDispatch *vd) const;
-			virtual const Eigen::Matrix4f &GetPoseValue() const {}
+
 		private:
 			ValueType value_type_;
 		};
@@ -141,7 +141,6 @@ namespace slambench {
 		class PoseValue : public Value {
 		public:
 			PoseValue(const Eigen::Matrix4f &pose) : Value(VT_POSE), pose_(pose) {}
-			const Eigen::Matrix4f &GetPoseValue() const { return pose_; }
 			const Eigen::Matrix4f &GetValue() const { return pose_; }
 		private:
 			Eigen::Matrix4f pose_;
