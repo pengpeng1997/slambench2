@@ -10,6 +10,8 @@
 
 #include "io/sensor/AccelerometerSensor.h"
 #include "io/sensor/SensorDatabase.h"
+#include "io/serialisation/Serialiser.h"
+#include "io/deserialisation/Deserialiser.h"
 
 using namespace slambench::io;
 
@@ -24,10 +26,15 @@ size_t AccelerometerSensor::GetFrameSize(const SLAMFrame *frame) const  {
 }
 
 class ACCSerialiser : public SensorSerialiser {
-	bool SerialiseSensorSpecific(Serialiser* serialiser, const Sensor* sensor) override {
+	bool SerialiseSensorSpecific(Serialiser* serialiser, const Sensor* s) override {
 		// nothing to do
-		(void)serialiser;
-		(void)sensor;
+		AccelerometerSensor *sensor = (AccelerometerSensor*)s;
+
+		serialiser->Write(&sensor->AcceleratorNoiseDensity, sizeof(sensor->AcceleratorNoiseDensity));
+		serialiser->Write(&sensor->AcceleratorDriftNoiseDensity , sizeof(sensor->AcceleratorDriftNoiseDensity));
+		serialiser->Write(&sensor->AcceleratorBiasDiffusion, sizeof(sensor->AcceleratorBiasDiffusion));
+		serialiser->Write(&sensor->AcceleratorSaturation        , sizeof(sensor->AcceleratorSaturation));
+
 		return true;
 	}
 };
@@ -45,8 +52,13 @@ class ACCDeserialiser : public SensorDeserialiser {
 
 	bool DeserialiseSensorSpecific(Deserialiser* d, Sensor* s) override {
 		// nothing to do
-		(void)d;
-		(void)s;
+		AccelerometerSensor *sensor = (AccelerometerSensor*)s;
+
+		d->Read(&sensor->AcceleratorNoiseDensity, sizeof(sensor->AcceleratorNoiseDensity));
+		d->Read(&sensor->AcceleratorDriftNoiseDensity , sizeof(sensor->AcceleratorDriftNoiseDensity));
+		d->Read(&sensor->AcceleratorBiasDiffusion, sizeof(sensor->AcceleratorBiasDiffusion));
+		d->Read(&sensor->AcceleratorSaturation        , sizeof(sensor->AcceleratorSaturation));
+
 		return true;
 	}
 };

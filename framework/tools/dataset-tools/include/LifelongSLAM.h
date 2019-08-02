@@ -31,7 +31,7 @@ class LifelongSLAMReader :  public DatasetReader {
 
 public :
 	std::string input;
-	bool rgb = true, depth = true, gt = true, stereo = false, accelerometer = true, gyro = true, odom = true, grey = true;
+	bool rgb = true, depth = true, gt = true, stereo = true, accelerometer = true, gyro = true, odom = true, grey = true;
 
 	LifelongSLAMReader(std::string name) : DatasetReader(name) {
 

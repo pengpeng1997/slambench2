@@ -10,6 +10,11 @@ namespace slambench {
 		class GyroSensor : public Sensor {
 		public:
 			const static sensor_type_t kGyroType;
+
+			float GyroscopeNoiseDensity;
+			float GyroscopeDriftNoiseDensity;
+			float GyroscopeBiasDiffusion;
+			float GyroscopeSaturation;
 			
 			GyroSensor(const sensor_name_t &sensor_name);
 			size_t GetFrameSize(const SLAMFrame *frame) const override;

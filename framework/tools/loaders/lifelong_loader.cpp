@@ -40,6 +40,7 @@ int main(int argc, char * argv[])
 		//***************************************************************************************
 
 		config->addParameter(file_output_parameter);
+		config->addParameter(alignment_type_parameter);
 		config->GetParameterManager().ReadArgumentsOrQuit(argc, argv);
 
 		//***************************************************************************************

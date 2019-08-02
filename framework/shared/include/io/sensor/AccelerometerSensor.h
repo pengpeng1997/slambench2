@@ -17,6 +17,11 @@ namespace slambench {
 		class AccelerometerSensor : public Sensor {
 		public:
 			const static sensor_type_t kAccType;
+
+			float AcceleratorNoiseDensity;
+			float AcceleratorBiasDiffusion;
+			float AcceleratorSaturation;
+			float AcceleratorDriftNoiseDensity ;
 			
 			AccelerometerSensor(const sensor_name_t &sensor_name);
 			size_t GetFrameSize(const SLAMFrame *frame) const override;

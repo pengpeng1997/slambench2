@@ -164,11 +164,11 @@ Eigen::Matrix4f slambench::io::compute_trans_matrix(std::string input_name_1, st
 bool analyseLifelongSLAMFolder(const std::string &dirname) {
 
 	static const std::vector<std::string> requirements = {
-			"d400_accel.csv",
-            "d400_gyro.csv",
-			"t265_accel.csv",
-            "t265_gyro.csv",
-            "odom.csv",
+			"d400_accelerometer.txt",
+            "d400_gyroscope.txt",
+			"t265_accelerometer.txt",
+            "t265_gyroscope.txt",
+            "odom.txt",
 			"color.txt",
 			"color",
 			"depth.txt",
@@ -179,7 +179,7 @@ bool analyseLifelongSLAMFolder(const std::string &dirname) {
 			"Fisheye_1",
 			"Fisheye_2.txt",
 			"Fisheye_2",
-			"GroundTruth.csv",
+			"GroundTruth.txt",
 			"sensors.yaml",
 			"trans_matrix.yaml"
 	};
@@ -374,15 +374,10 @@ bool loadLifelongSLAMRGBData(const std::string &dirname, const std::string &sens
 	return true;
 }
 
-bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
+bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sensor_name, const std::string &source_name, SLAMFile &file) {
 	std::string filename = dirname + "/sensors.yaml";
 	YAML::Node f = YAML::LoadFile(filename.c_str());
 
-	// for(int i = 0; i < 16; ++i) {
-	// 	int y = i % 4;
-	// 	int x = i / 4;
-	// 	pose(x,y) = f[sensor_name]["extrinsics"]["data"][i].as<float>();
-	// }
 	CameraSensor *grey_sensor = new CameraSensor("Grey", CameraSensor::kCameraType);
 	grey_sensor->Index = 0;
 	grey_sensor->Width = f[sensor_name]["width"].as<int>();
@@ -411,9 +406,11 @@ bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sen
 
 	file.Sensors.AddSensor(grey_sensor);
 
+	std::cout<<"Grey camera sensor created..."<<std::endl;
+
 	std::string line;
 
-	std::ifstream infile(dirname + "/" + "color.txt");
+	std::ifstream infile(dirname + "/" + source_name + ".txt");
 
 	boost::smatch match;
 
@@ -475,14 +472,14 @@ bool loadLifelongSLAMGroundTruthData(const std::string &dirname , SLAMFile &file
 	std::string line;
 
 	boost::smatch match;
-	std::ifstream infile(dirname + "/" + "GroundTruth.csv");
+	std::ifstream infile(dirname + "/" + "GroundTruth.txt");
 
 	while (std::getline(infile, line)){
 		if (line.size() == 0) {
 			continue;
 		} else if (boost::regex_match(line,match,boost::regex("^\\s*#.*$"))) {
 			continue;
-		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
+		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
             
           int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
@@ -534,25 +531,23 @@ bool loadLifelongSLAMGroundTruthData(const std::string &dirname , SLAMFile &file
 
 
 bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
-	/*  
-  double sigma_g_c;  ///< Gyroscope noise density.
-  double sigma_bg;  ///< Initial gyroscope bias.
-  double sigma_a_c;  ///< Accelerometer noise density.
-  double sigma_ba;  ///< Initial accelerometer bias
-  double sigma_gw_c; ///< Gyroscope drift noise density.
-  double sigma_aw_c; ///< Accelerometer drift noise density.
-  */
- /*
- acc_n: 0.1          # accelerometer measurement noise standard deviation. #0.2
- gyr_n: 0.01         # gyroscope measurement noise standard deviation.     #0.05
- acc_w: 0.0002         # accelerometer bias random work noise standard deviation.  #0.02
- gyr_w: 2.0e-5       # gyroscope bias random work noise standard deviation.     #4.0e-5
- */
+	std::string filename = dirname + "/sensors.yaml";
+	YAML::Node f = YAML::LoadFile(filename.c_str());
 
 	AccelerometerSensor *accelerometer_sensor = new AccelerometerSensor("Accelerometer");
 	accelerometer_sensor->Index = file.Sensors.size();
 	accelerometer_sensor->Description = "AccelerometerSensor";
-	//要增加参数
+
+	accelerometer_sensor->Rate = f[sensor_name]["fps"].as<float>();
+
+	accelerometer_sensor->AcceleratorNoiseDensity = 2.0000e-3;
+	accelerometer_sensor->AcceleratorDriftNoiseDensity = 4.0e-5;
+	accelerometer_sensor->AcceleratorBiasDiffusion = 3.0000e-3;
+	accelerometer_sensor->AcceleratorSaturation = 176.0;
+
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	accelerometer_sensor->CopyPose(pose);
+
 	file.Sensors.AddSensor(accelerometer_sensor);
 
 	if(!accelerometer_sensor) {
@@ -566,7 +561,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 	std::string line;
 
 	  boost::smatch match;
-	  std::ifstream infile(dirname + "/" + "accel.csv");
+	  std::ifstream infile(dirname + "/" + sensor_name + ".txt");
 
 	while (std::getline(infile, line)){
 
@@ -574,7 +569,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 			continue;
 		} else if (boost::regex_match(line,match,boost::regex("^\\s*#.*$"))) {
 			continue;
-		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
+		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
 
 		 int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
@@ -611,10 +606,23 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 
 
 bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
+	std::string filename = dirname + "/sensors.yaml";
+	YAML::Node f = YAML::LoadFile(filename.c_str());
 
 	GyroSensor *gyro_sensor = new GyroSensor("Gyro");
 	gyro_sensor->Index = file.Sensors.size();
 	gyro_sensor->Description = "GyroSensor";
+
+	gyro_sensor->Rate = f[sensor_name]["fps"].as<float>();
+
+	gyro_sensor->GyroscopeNoiseDensity = 1.6968e-04;
+	gyro_sensor->GyroscopeDriftNoiseDensity = 4.0e-6;
+	gyro_sensor->GyroscopeBiasDiffusion = 1.9393e-05;
+	gyro_sensor->GyroscopeSaturation   =   7.8;
+
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	gyro_sensor->CopyPose(pose);
+
 	file.Sensors.AddSensor(gyro_sensor);
 
 	if(!gyro_sensor) {
@@ -628,7 +636,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 	std::string line;
 
 	  boost::smatch match;
-	  std::ifstream infile(dirname + "/" + "gyro.csv");
+	  std::ifstream infile(dirname + "/" + sensor_name + ".txt");
 
 	while (std::getline(infile, line)){
 
@@ -636,7 +644,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 			continue;
 		} else if (boost::regex_match(line,match,boost::regex("^\\s*#.*$"))) {
 			continue;
-		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
+		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
 
 		 int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
@@ -677,6 +685,10 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 	OdomSensor *odom_sensor = new OdomSensor("Odom");
 	odom_sensor->Index = file.Sensors.size();
 	odom_sensor->Description = "OdomSensor";
+
+	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	odom_sensor->CopyPose(pose);
+
 	file.Sensors.AddSensor(odom_sensor);
 
 	if(!odom_sensor) {
@@ -690,7 +702,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 	std::string line;
 
 	  boost::smatch match;
-	  std::ifstream infile(dirname + "/" + "odom.csv");
+	  std::ifstream infile(dirname + "/" + "odom.txt");
 
 	while (std::getline(infile, line)){
 
@@ -698,7 +710,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 			continue;
 		} else if (boost::regex_match(line,match,boost::regex("^\\s*#.*$"))) {
 			continue;
-		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?),([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
+		} else if (boost::regex_match(line,match,boost::regex("^([0-9]+)[.]([0-9]+)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s+([+-]?[0-9]+(.[0-9]+([Ee]([+-]?)[0-9]+)?)?)\\s*$"))) {
 
 		int timestampS = std::stoi(match[1]);
 		int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
@@ -768,7 +780,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 
 SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
-	if(!(grey || rgb || depth)) {
+	if(!(grey || rgb || depth || stereo)) {
 		std::cerr <<  "No sensors defined\n";
 		return nullptr;
 	}
@@ -784,10 +796,6 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	SLAMFile * slamfilep = new SLAMFile();
 	SLAMFile & slamfile  = *slamfilep;
 
-	Sensor::pose_t pose = Eigen::Matrix4f::Identity();
-
-	//////  Default are freiburg1
-
 	DepthSensor::disparity_params_t disparity_params =  {0.001,0.0};
 	DepthSensor::disparity_type_t disparity_type = DepthSensor::affine_disparity;
 
@@ -802,12 +810,11 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
 	}
 
-
 	/**
 	 * load Grey
 	 */
 
-	if(grey && !loadLifelongSLAMGreyData(dirname, "d400_color_optical_frame",slamfile)) {
+	if(grey && !loadLifelongSLAMGreyData(dirname, "d400_color_optical_frame", "color", slamfile)) {
 		std::cout << "Error while loading LifelongSLAM Grey information." << std::endl;
 		delete slamfilep;
 		return nullptr;
@@ -826,17 +833,57 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
 	}
 
-		/**
+	/**
+	 * load Accelerometer
+	 */
+	if(rgb && accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "d400_accelerometer", slamfile)) {
+		std::cout << "Error while loading Accelerometer information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+
+	}
+
+
+	if(rgb && gyro && !loadLifelongSLAMGyroData(dirname, "d400_gyroscope", slamfile)) {
+		std::cout << "Error while loading Gyro information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+
+	}
+
+	/**
 	 * load Fisheyes
 	 */
 
-	// if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye1_optical_frame", slamfile) && !loadLifelongSLAMGreyData(dirname, "t265_fisheye2_optical_frame", slamfile)) {
-	// 	std::cout << "Error while loading LifelongSLAM RGB information." << std::endl;
-	// 	delete slamfilep;
-	// 	return nullptr;
+	if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye1_optical_frame", "Fisheye_1", slamfile)) {
+		std::cout << "Error while loading LifelongSLAM fisheye1 information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+	}
 
-	// }
+	if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye2_optical_frame", "Fisheye_2", slamfile)) {
+		std::cout << "Error while loading LifelongSLAM fisheye2 information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+	}
 
+	/**
+	 * load Accelerometer
+	 */
+	if(stereo && accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "t265_accelerometer", slamfile)) {
+		std::cout << "Error while loading Accelerometer information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+
+	}
+
+
+	if(stereo && gyro && !loadLifelongSLAMGyroData(dirname, "t265_gyroscope", slamfile)) {
+		std::cout << "Error while loading Gyro information." << std::endl;
+		delete slamfilep;
+		return nullptr;
+
+	}
 
 	/**
 	 * load GT
@@ -848,24 +895,6 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
 	}
 
-
-	/**
-	 * load Accelerometer: This one failed ???what???
-	 */
-	if(accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "d400_accelerometer", slamfile)) {
-		std::cout << "Error while loading Accelerometer information." << std::endl;
-		delete slamfilep;
-		return nullptr;
-
-	}
-    //I write for gyro and odom like acc, now you tell me it failed...
-
-	if(gyro && !loadLifelongSLAMGyroData(dirname, "d400_gyroscope", slamfile)) {
-		std::cout << "Error while loading Gyro information." << std::endl;
-		delete slamfilep;
-		return nullptr;
-
-	}
 
     if(odom && !loadLifelongSLAMOdomData(dirname, "odometer", slamfile)) {
 		std::cout << "Error while loading Odom information." << std::endl;
