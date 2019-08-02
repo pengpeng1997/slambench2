@@ -346,6 +346,7 @@ void SLAMBenchConfigurationLifelong::LoadNextInputInterface() {
 void SLAMBenchConfigurationLifelong::init_cw() {
 
     if (cw_initialised_) { 
+        this->OutputToTxt();
         delete memory_metric;
 		delete duration_metric;
 		delete power_metric;
@@ -357,91 +358,117 @@ void SLAMBenchConfigurationLifelong::init_cw() {
     }
     auto gt_traj = this->GetGroundTruth().GetMainOutput(slambench::values::VT_POSE);
     slambench::outputs::TrajectoryAlignmentMethod *alignment_method;
-		if(alignment_technique_ == "original") {
-			alignment_method = new slambench::outputs::OriginalTrajectoryAlignmentMethod();
-		} else if(alignment_technique_ == "new") {
-			alignment_method = new slambench::outputs::NewTrajectoryAlignmentMethod();
-		} else {
-		std::cerr << "Unknown alignment method " << alignment_technique << std::endl;
-		throw std::logic_error("Unknown alignment method");
+	if(alignment_technique_ == "original") {
+		alignment_method = new slambench::outputs::OriginalTrajectoryAlignmentMethod();
+	} else if(alignment_technique_ == "new") {
+		alignment_method = new slambench::outputs::NewTrajectoryAlignmentMethod();
+	} else {
+	std::cerr << "Unknown alignment method " << alignment_technique << std::endl;
+	throw std::logic_error("Unknown alignment method");
+	}
+    cw = new slambench::ColumnWriter(this->get_log_stream(), "\t");
+
+	cw->AddColumn(&(this->row_number));
+    bool have_timestamp = false;
+	memory_metric   = new slambench::metrics::MemoryMetric();
+	duration_metric = new slambench::metrics::DurationMetric();
+	power_metric    = new slambench::metrics::PowerMetric();
+    for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
+        if (cw_initialised_) { 
+            lib->GetMetricManager().reset();
+            lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->reset();
+        }
+
+	    // retrieve the trajectory of the lib
+		auto lib_traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
+		if (lib_traj == nullptr) {
+			std::cerr << "There is no output trajectory in the library outputs." << std::endl;
+			exit(1);
 		}
-    	cw = new slambench::ColumnWriter(this->get_log_stream(), "\t");
 
-		// slambench::RowNumberColumn row_number;
-		cw->AddColumn(&(this->row_number));
-        bool have_timestamp = false;
-		memory_metric   = new slambench::metrics::MemoryMetric();
-		duration_metric = new slambench::metrics::DurationMetric();
-		power_metric    = new slambench::metrics::PowerMetric();
-    		for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
-                if (cw_initialised_) { 
-                    lib->GetMetricManager().reset();
-                    lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE)->reset();
-                }
+		// Create timestamp column if we don't have one
+		if(!have_timestamp) {
+			have_timestamp = true;
+			cw->AddColumn(new slambench::OutputTimestampColumnInterface(lib_traj));
+		}
 
-			// retrieve the trajectory of the lib
-			auto lib_traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
-			if (lib_traj == nullptr) {
-				std::cerr << "There is no output trajectory in the library outputs." << std::endl;
-				exit(1);
+		if (gt_traj) {
+			// Create an aligned trajectory
+			auto alignment = new slambench::outputs::AlignmentOutput("Alignment", new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj), lib_traj, alignment_method);
+			alignment->SetActive(true);
+			alignment->SetKeepOnlyMostRecent(true);
+			auto aligned = new slambench::outputs::AlignedPoseOutput(lib_traj->GetName() + " (Aligned)", alignment, lib_traj);
+
+			// Add ATE metric
+			auto ate_metric = new slambench::metrics::ATEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
+			if (ate_metric->GetValueDescription().GetStructureDescription().size() > 0) {
+				lib->GetMetricManager().AddFrameMetric(ate_metric);
+				cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, ate_metric, lib->GetMetricManager().GetFramePhase()));
 			}
 
-			// Create timestamp column if we don't have one
-			if(!have_timestamp) {
-				have_timestamp = true;
-				cw->AddColumn(new slambench::OutputTimestampColumnInterface(lib_traj));
-			}
-
-			if (gt_traj) {
-				// Create an aligned trajectory
-				auto alignment = new slambench::outputs::AlignmentOutput("Alignment", new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj), lib_traj, alignment_method);
-				alignment->SetActive(true);
-				alignment->SetKeepOnlyMostRecent(true);
-				auto aligned = new slambench::outputs::AlignedPoseOutput(lib_traj->GetName() + " (Aligned)", alignment, lib_traj);
-
-				// Add ATE metric
-				auto ate_metric = new slambench::metrics::ATEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
-				if (ate_metric->GetValueDescription().GetStructureDescription().size() > 0) {
-					lib->GetMetricManager().AddFrameMetric(ate_metric);
-					cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, ate_metric, lib->GetMetricManager().GetFramePhase()));
-				}
-
-				// Add RPE metric
-				auto rpe_metric = new slambench::metrics::RPEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
-				lib->GetMetricManager().AddFrameMetric(rpe_metric);
-				cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, rpe_metric, lib->GetMetricManager().GetFramePhase()));
-			}
+			// Add RPE metric
+			auto rpe_metric = new slambench::metrics::RPEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));
+			lib->GetMetricManager().AddFrameMetric(rpe_metric);
+			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, rpe_metric, lib->GetMetricManager().GetFramePhase()));
+		}
 			// Add a duration metric
-			lib->GetMetricManager().AddFrameMetric(duration_metric);
-			lib->GetMetricManager().AddPhaseMetric(duration_metric);
-			cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
-			for(auto phase : lib->GetMetricManager().GetPhases()) {
-				cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, phase));
-			}
-
-			// Add a memory metric
-			lib->GetMetricManager().AddFrameMetric(memory_metric);
-			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, memory_metric, lib->GetMetricManager().GetFramePhase()));
-
-			// Add a power metric if it makes sense
-			if (power_metric->GetValueDescription().GetStructureDescription().size() > 0) {
-				lib->GetMetricManager().AddFrameMetric(power_metric);
-				cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, power_metric, lib->GetMetricManager().GetFramePhase()));
-			}
-
-			// Add XYZ row from the trajectory
-			auto traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
-			traj->SetActive(true);
-			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, new slambench::outputs::PoseToXYZOutput(traj)));
-
+		lib->GetMetricManager().AddFrameMetric(duration_metric);
+		lib->GetMetricManager().AddPhaseMetric(duration_metric);
+		cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
+		for(auto phase : lib->GetMetricManager().GetPhases()) {
+			cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, phase));
 		}
+
+		// Add a memory metric
+		lib->GetMetricManager().AddFrameMetric(memory_metric);
+		cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, memory_metric, lib->GetMetricManager().GetFramePhase()));
+
+		// Add a power metric if it makes sense
+		if (power_metric->GetValueDescription().GetStructureDescription().size() > 0) {
+			lib->GetMetricManager().AddFrameMetric(power_metric);
+			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, power_metric, lib->GetMetricManager().GetFramePhase()));
+		}
+
+		// Add XYZ row from the trajectory
+		auto traj = lib->GetOutputManager().GetMainOutput(slambench::values::VT_POSE);
+		traj->SetActive(true);
+		cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, new slambench::outputs::PoseToXYZOutput(traj)));
+
+	}
         
 
-        frame_callbacks_.clear();
-        // slambench::ColumnWriter &cw_ = *cw; 
-		this->AddFrameCallback([this]{this->cw->PrintRow();}); // @suppress("Invalid arguments")
-        cw_initialised_ = true;
+    frame_callbacks_.clear();
+	this->AddFrameCallback([this]{this->cw->PrintRow();}); // @suppress("Invalid arguments")
+    cw_initialised_ = true;
     
-		cw->PrintHeader();
+	cw->PrintHeader();
         
+}
+
+void SLAMBenchConfigurationLifelong::OutputToTxt()
+{
+	float x, y, z;
+	Eigen::Matrix3d R;
+	struct timeval tv;
+	for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
+	    std::ofstream OutFile;
+		OutFile.open(lib->get_library_name() + "_" + this->output_filename_, std::ios::app);
+   		OutFile << "#DatasetTimestamp, ProcessTimestamp, position.x, y, z, quaterniond.x, y, z, w"<<std::endl;	
+		auto output = lib->GetOutputManager().GetOutput("Pose")->GetValues();
+		for (auto it = output.begin(); it != output.end(); ++it ) {
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					R(i, j) = it->second->GetPoseValue()(i, j);
+				}
+			}
+			Eigen::Quaterniond q = Eigen::Quaterniond(R);
+    		q.normalize();
+			x = it->second->GetPoseValue()(0, 3);
+			y = it->second->GetPoseValue()(1, 3);
+			z = it->second->GetPoseValue()(2, 3);
+			gettimeofday(&tv,NULL); 
+			OutFile<<it->first<<" "<<tv.tv_sec<<"."<<tv.tv_usec<<" "<<x<<" "<<y<<" "<<z<<" "<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<std::endl;
+		}
+		OutFile.close();
+	}
 }

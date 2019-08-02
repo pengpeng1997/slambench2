@@ -23,7 +23,12 @@
 #include <metrics/MemoryMetric.h>
 #include "ColumnWriter.h"
 #include <SLAMBenchException.h>
-
+#include <sys/time.h>
+#include <cstdlib>  
+#include <cstdio>
+#include <ctime>
+#include <cmath>
+#include <unistd.h>
 
 
 class SLAMBenchConfigurationLifelong : public SLAMBenchConfiguration {
@@ -43,6 +48,7 @@ private :
 public :
 
     std::string alignment_technique_ = "original";
+    std::string output_filename_ = "";
     void init_cw();
 	static void compute_loop_algorithm(SLAMBenchConfiguration* config, bool *stay_on, SLAMBenchUI *ui);
     void InitGroundtruth(bool with_point_cloud = true);
@@ -53,7 +59,7 @@ public :
 	void AddInputInterface(slambench::io::InputInterface *input_ref);
     void init_sensors();
     void LoadNextInputInterface();
-
+    void OutputToTxt();
 };
 
 
