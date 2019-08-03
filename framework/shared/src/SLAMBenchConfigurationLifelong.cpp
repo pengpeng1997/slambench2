@@ -223,7 +223,8 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
         while(current_frame!= nullptr)
         {
-
+            
+        if (current_frame->FrameSensor->GetType()!= slambench::io::GroundTruthSensor::kGroundTruthTrajectoryType) {
             // ********* [[ NEW FRAME PROCESSED BY ALGO ]] *********
 
             for (auto lib : config_lifelong->slam_libs) {
@@ -231,9 +232,10 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
                 // ********* [[ SEND THE FRAME ]] *********
                 ongoing=not lib->c_sb_update_frame(lib,current_frame);
-
+                // std::cout<<"update here!"<<std::endl;
                 // This algorithm hasn't received enough frames yet.
                 if(ongoing) {
+                    // std::cout<<"no enough frame."<<std::endl;
                     continue;
                 }
 
@@ -257,12 +259,7 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
             }
 
-
-
             // ********* [[ FINALIZE ]] *********
-
-            current_frame->FreeData();
-
 
             if(!ongoing) {
                 config->FireEndOfFrame();
@@ -272,7 +269,9 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
                     }
                 }
             }
+        }
             // we're done with the frame
+            current_frame->FreeData();
             current_frame = config_lifelong->input_stream_->GetNextFrame();
         }
         std::cerr << "Last frame in bag processed." << std::endl;
@@ -297,6 +296,8 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
             {
                 auto gt_frame = dynamic_cast<slambench::io::GTBufferingFrameStream*>(config_lifelong->input_stream_)->GetGTFrames()->GetFrame(0);
                 lib->c_sb_update_frame(lib,gt_frame);
+                std::cout<<"********** feed pose. **********"<<std::endl;
+                
             }
         }
         bags_count++;
