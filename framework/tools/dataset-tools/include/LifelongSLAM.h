@@ -31,17 +31,22 @@ class LifelongSLAMReader :  public DatasetReader {
 
 public :
 	std::string input;
-	bool rgb = true, depth = true, gt = true, stereo = true, accelerometer = true, gyro = true, odom = true, grey = true;
+	bool color = false, grey = false, depth = false, aligned_depth = false, fisheye1 = false, fisheye2 = false,
+	 d400_accel = false, d400_gyro = false, t265_accel = false, t265_gyro = false, odom = false, gt = true;
 
-	LifelongSLAMReader(std::string name) : DatasetReader(name) {
+	LifelongSLAMReader(std::string name) : DatasetReader(name) { 
 
 		this->addParameter(TypedParameter<std::string>("i",     "input-directory",       "path of the LifelongSLAM dataset directory",   &this->input, NULL));
 		this->addParameter(TypedParameter<bool>("grey",     "grey",       "set to true or false to specify if the GREY stream need to be include in the slam file.",   &this->grey, NULL));
-		this->addParameter(TypedParameter<bool>("rgb",     "rgb",       "set to true or false to specify if the RGB stream need to be include in the slam file.",   &this->rgb, NULL));
+		this->addParameter(TypedParameter<bool>("color",     "color",       "set to true or false to specify if the RGB stream need to be include in the slam file.",   &this->color, NULL));
 		this->addParameter(TypedParameter<bool>("depth",     "depth",       "set to true or false to specify if the DEPTH stream need to be include in the slam file.",   &this->depth, NULL));
-		this->addParameter(TypedParameter<bool>("sgrey",     "stereo-fisheye-grey",       "set to true or false to specify if the STEREO GREY stream need to be include in the slam file.",   &this->stereo, NULL));
-		this->addParameter(TypedParameter<bool>("acc",    "accelerometer",       "set to true or false to specify if the ACCELEROMETER stream need to be include in the slam file.",   &this->accelerometer, NULL));
-		this->addParameter(TypedParameter<bool>("gyro",    "gyro",       "set to true or false to specify if the GYRO stream need to be include in the slam file.",   &this->gyro, NULL));
+		this->addParameter(TypedParameter<bool>("aligned_depth",     "aligned_depth",       "set to true or false to specify if the ALIGNED_DEPTH stream need to be include in the slam file.",   &this->aligned_depth, NULL));
+		this->addParameter(TypedParameter<bool>("fisheye1",     "fisheye1",       "set to true or false to specify if the FISHEYE1 stream need to be include in the slam file.",   &this->fisheye1, NULL));
+		this->addParameter(TypedParameter<bool>("fisheye2",     "fisheye2",       "set to true or false to specify if the FISHEYE2 GREY stream need to be include in the slam file.",   &this->fisheye2, NULL));
+		this->addParameter(TypedParameter<bool>("d400_accel",    "d400_accelerometer",       "set to true or false to specify if the D400_ACCELEROMETER stream need to be include in the slam file.",   &this->d400_accel, NULL));
+		this->addParameter(TypedParameter<bool>("d400_gyro",    "d400_gyro",       "set to true or false to specify if the D400_GYRO stream need to be include in the slam file.",   &this->d400_gyro, NULL));
+		this->addParameter(TypedParameter<bool>("t265_accel",    "t265_accelerometer",       "set to true or false to specify if the T265_ACCELEROMETER stream need to be include in the slam file.",   &this->t265_accel, NULL));
+		this->addParameter(TypedParameter<bool>("t265_gyro",    "t265_gyro",       "set to true or false to specify if the T265_GYRO stream need to be include in the slam file.",   &this->t265_gyro, NULL));
 		this->addParameter(TypedParameter<bool>("odom",    "odom",       "set to true or false to specify if the ODOMETRY stream need to be include in the slam file.",   &this->odom, NULL));
 		this->addParameter(TypedParameter<bool>("gt",     "gt",       "set to true or false to specify if the GROUNDTRUTH POSE stream need to be include in the slam file.",   &this->gt, NULL));
 		

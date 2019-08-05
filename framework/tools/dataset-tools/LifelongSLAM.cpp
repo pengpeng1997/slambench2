@@ -92,12 +92,12 @@ Eigen::Matrix4f slambench::io::compute_trans_matrix(std::string input_name_1, st
     int num = 0;
     for(int i = 0; i < f["trans_matrix"].size(); i++) {
         int index_1, index_2;
-        std::string name_1 = f["trans_matrix"][i]["name_1"].as<std::string>();
+        std::string name_1 = f["trans_matrix"][i]["parent_frame"].as<std::string>();
         if(name_to_index.count(name_1) == 0){
             name_to_index[name_1] = num;
             num++;
         }
-        std::string name_2 = f["trans_matrix"][i]["name_2"].as<std::string>();
+        std::string name_2 = f["trans_matrix"][i]["child_frame"].as<std::string>();
         if(name_to_index.count(name_2) == 0){
             name_to_index[name_2] = num;
             num++;
@@ -157,6 +157,8 @@ Eigen::Matrix4f slambench::io::compute_trans_matrix(std::string input_name_1, st
             Eigen::Matrix4f trans = transations[dir];
             result_matrix = result_matrix * trans;
        }
+	//    std::cout<<input_name_1<<" to "<<input_name_2<<std::endl;
+	//    std::cout<<result_matrix<<std::endl;
        return result_matrix;
 }
 
@@ -212,7 +214,7 @@ bool analyseLifelongSLAMFolder(const std::string &dirname) {
 }
 
 
-bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file, const DepthSensor::disparity_params_t &disparity_params,const DepthSensor::disparity_type_t &disparity_type) {
+bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file, const DepthSensor::disparity_params_t &disparity_params,const DepthSensor::disparity_type_t &disparity_type, bool aligned_depth = false) {
 
 	std::string filename = dirname + "/sensors.yaml";
 	YAML::Node f = YAML::LoadFile(filename.c_str());
@@ -228,7 +230,7 @@ bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &se
 	depth_sensor->DisparityType = disparity_type;
 	depth_sensor->CopyDisparityParams(disparity_params);
 	depth_sensor->Description = "Depth";
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	depth_sensor->CopyPose(pose);
 
 	depth_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / depth_sensor->Width;
@@ -250,10 +252,13 @@ bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &se
 	file.Sensors.AddSensor(depth_sensor);
 
 	std::string line;
-
-	std::ifstream infile(dirname + "/" + "depth.txt");
-	// std::ifstream infile(dirname + "/" + "aligned_depth.txt");
-
+	std::string txt_name;
+	if (aligned_depth) {
+		txt_name = "aligned_depth.txt";
+	} else {
+		txt_name = "depth.txt";
+	}
+	std::ifstream infile(dirname + "/" + txt_name);
 	boost::smatch match;
 
 	while (std::getline(infile, line)){
@@ -308,7 +313,7 @@ bool loadLifelongSLAMRGBData(const std::string &dirname, const std::string &sens
 	rgb_sensor->FrameFormat = frameformat::Raster;
 	rgb_sensor->PixelFormat = pixelformat::RGB_III_888;
 	rgb_sensor->Description = "RGB";
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	rgb_sensor->CopyPose(pose);
 
 	rgb_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / rgb_sensor->Width;
@@ -385,7 +390,7 @@ bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sen
 	grey_sensor->FrameFormat = frameformat::Raster;
 	grey_sensor->PixelFormat = pixelformat::G_I_8;
 	grey_sensor->Description = "Grey";
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	grey_sensor->CopyPose(pose);
 
 	grey_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / grey_sensor->Width;
@@ -545,7 +550,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 	accelerometer_sensor->AcceleratorBiasDiffusion = 3.0000e-3;
 	accelerometer_sensor->AcceleratorSaturation = 176.0;
 
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	accelerometer_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(accelerometer_sensor);
@@ -620,7 +625,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 	gyro_sensor->GyroscopeBiasDiffusion = 1.9393e-05;
 	gyro_sensor->GyroscopeSaturation   =   7.8;
 
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	gyro_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(gyro_sensor);
@@ -686,7 +691,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 	odom_sensor->Index = file.Sensors.size();
 	odom_sensor->Description = "OdomSensor";
 
-	Eigen::Matrix4f pose = compute_trans_matrix(sensor_name, "body_frame", dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
 	odom_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(odom_sensor);
@@ -780,7 +785,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 
 SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 
-	if(!(grey || rgb || depth || stereo)) {
+	if(!(grey || color || depth || aligned_depth || fisheye1 ||fisheye2)) {
 		std::cerr <<  "No sensors defined\n";
 		return nullptr;
 	}
@@ -807,7 +812,16 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 		std::cout << "Error while loading LifelongSLAM depth information." << std::endl;
 		delete slamfilep;
 		return nullptr;
+	}
 
+	/**
+	 * load Aligned_Depth
+	 */
+
+	if(aligned_depth && !loadLifelongSLAMDepthData(dirname,"d400_color_optical_frame", slamfile,disparity_params,disparity_type, true)) {
+		std::cout << "Error while loading LifelongSLAM depth information." << std::endl;
+		delete slamfilep;
+		return nullptr;
 	}
 
 	/**
@@ -818,50 +832,44 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 		std::cout << "Error while loading LifelongSLAM Grey information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
-
 
 	/**
 	 * load RGB
 	 */
 
-	if(rgb && !loadLifelongSLAMRGBData(dirname, "d400_color_optical_frame", slamfile)) {
+	if(color && !loadLifelongSLAMRGBData(dirname, "d400_color_optical_frame", slamfile)) {
 		std::cout << "Error while loading LifelongSLAM RGB information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 	/**
 	 * load Accelerometer
 	 */
-	if(rgb && accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "d400_accelerometer", slamfile)) {
+	if(d400_accel && !loadLifelongSLAMAccelerometerData(dirname, "d400_accelerometer", slamfile)) {
 		std::cout << "Error while loading Accelerometer information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
-
-	if(rgb && gyro && !loadLifelongSLAMGyroData(dirname, "d400_gyroscope", slamfile)) {
+	if(d400_gyro && !loadLifelongSLAMGyroData(dirname, "d400_gyroscope", slamfile)) {
 		std::cout << "Error while loading Gyro information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 	/**
 	 * load Fisheyes
 	 */
 
-	if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye1_optical_frame", "Fisheye_1", slamfile)) {
+	if(fisheye1 && !loadLifelongSLAMGreyData(dirname, "t265_fisheye1_optical_frame", "Fisheye_1", slamfile)) {
 		std::cout << "Error while loading LifelongSLAM fisheye1 information." << std::endl;
 		delete slamfilep;
 		return nullptr;
 	}
 
-	if(stereo && !loadLifelongSLAMGreyData(dirname, "t265_fisheye2_optical_frame", "Fisheye_2", slamfile)) {
+	if(fisheye2 && !loadLifelongSLAMGreyData(dirname, "t265_fisheye2_optical_frame", "Fisheye_2", slamfile)) {
 		std::cout << "Error while loading LifelongSLAM fisheye2 information." << std::endl;
 		delete slamfilep;
 		return nullptr;
@@ -870,19 +878,17 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 	/**
 	 * load Accelerometer
 	 */
-	if(stereo && accelerometer && !loadLifelongSLAMAccelerometerData(dirname, "t265_accelerometer", slamfile)) {
+	if(t265_accel && !loadLifelongSLAMAccelerometerData(dirname, "t265_accelerometer", slamfile)) {
 		std::cout << "Error while loading Accelerometer information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 
-	if(stereo && gyro && !loadLifelongSLAMGyroData(dirname, "t265_gyroscope", slamfile)) {
+	if(t265_gyro && !loadLifelongSLAMGyroData(dirname, "t265_gyroscope", slamfile)) {
 		std::cout << "Error while loading Gyro information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 	/**
@@ -892,7 +898,6 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 		std::cout << "Error while loading gt information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 
@@ -900,7 +905,6 @@ SLAMFile* LifelongSLAMReader::GenerateSLAMFile () {
 		std::cout << "Error while loading Odom information." << std::endl;
 		delete slamfilep;
 		return nullptr;
-
 	}
 
 	return slamfilep;
