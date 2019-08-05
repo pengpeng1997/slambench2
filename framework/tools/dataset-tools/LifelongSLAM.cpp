@@ -383,7 +383,7 @@ bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sen
 	std::string filename = dirname + "/sensors.yaml";
 	YAML::Node f = YAML::LoadFile(filename.c_str());
 
-	CameraSensor *grey_sensor = new CameraSensor("Grey", CameraSensor::kCameraType);
+	CameraSensor *grey_sensor = new CameraSensor(sensor_name, CameraSensor::kCameraType);
 	grey_sensor->Index = 0;
 	grey_sensor->Width = f[sensor_name]["width"].as<int>();
 	grey_sensor->Height = f[sensor_name]["height"].as<int>();
@@ -542,7 +542,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 	std::string filename = dirname + "/sensors.yaml";
 	YAML::Node f = YAML::LoadFile(filename.c_str());
 
-	AccelerometerSensor *accelerometer_sensor = new AccelerometerSensor("Accelerometer");
+	AccelerometerSensor *accelerometer_sensor = new AccelerometerSensor(sensor_name);
 	accelerometer_sensor->Index = file.Sensors.size();
 	accelerometer_sensor->Description = "AccelerometerSensor";
 
@@ -617,7 +617,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 	std::string filename = dirname + "/sensors.yaml";
 	YAML::Node f = YAML::LoadFile(filename.c_str());
 
-	GyroSensor *gyro_sensor = new GyroSensor("Gyro");
+	GyroSensor *gyro_sensor = new GyroSensor(sensor_name);
 	gyro_sensor->Index = file.Sensors.size();
 	gyro_sensor->Description = "GyroSensor";
 
@@ -690,7 +690,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 
 bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sensor_name, SLAMFile &file) {
 
-	OdomSensor *odom_sensor = new OdomSensor("Odom");
+	OdomSensor *odom_sensor = new OdomSensor(sensor_name);
 	odom_sensor->Index = file.Sensors.size();
 	odom_sensor->Description = "OdomSensor";
 
