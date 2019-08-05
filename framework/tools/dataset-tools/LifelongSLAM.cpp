@@ -400,12 +400,15 @@ bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sen
 
 	if (f[sensor_name]["distortion_model"].as<std::string>() == "radial-tangential") {
 		grey_sensor->DistortionType = slambench::io::CameraSensor::RadialTangential;
-		grey_sensor->RadialTangentialDistortion[0] = f[sensor_name]["distortion_coefficients"]["data"][0].as<float>();
-		grey_sensor->RadialTangentialDistortion[1] = f[sensor_name]["distortion_coefficients"]["data"][1].as<float>();
-		grey_sensor->RadialTangentialDistortion[2] = f[sensor_name]["distortion_coefficients"]["data"][2].as<float>();
-		grey_sensor->RadialTangentialDistortion[3] = f[sensor_name]["distortion_coefficients"]["data"][3].as<float>();
-		grey_sensor->RadialTangentialDistortion[4] = 0;//??
+	} else if (f[sensor_name]["distortion_model"].as<std::string>() == "Kannala-Brandt") {
+		grey_sensor->DistortionType = slambench::io::CameraSensor::KannalaBrandt;
 	}
+		
+	grey_sensor->RadialTangentialDistortion[0] = f[sensor_name]["distortion_coefficients"]["data"][0].as<float>();
+	grey_sensor->RadialTangentialDistortion[1] = f[sensor_name]["distortion_coefficients"]["data"][1].as<float>();
+	grey_sensor->RadialTangentialDistortion[2] = f[sensor_name]["distortion_coefficients"]["data"][2].as<float>();
+	grey_sensor->RadialTangentialDistortion[3] = f[sensor_name]["distortion_coefficients"]["data"][3].as<float>();
+	grey_sensor->RadialTangentialDistortion[4] = 0;
 	grey_sensor->Index =file.Sensors.size();
 	grey_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
