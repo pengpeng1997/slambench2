@@ -84,9 +84,9 @@ int main(int argc, char * argv[])
 		//***************************************************************************************
 		// End of experiment, we output the map
 		//***************************************************************************************
-		if(output_filename != "") {
-			config->OutputToTxt();
-		}
+
+		config->OutputToTxt();
+
 
 		std::cout << "End of program." << std::endl;
 

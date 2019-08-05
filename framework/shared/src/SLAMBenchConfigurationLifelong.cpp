@@ -348,14 +348,14 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 
     if (cw_initialised_) { 
         this->OutputToTxt();
-        delete memory_metric;
-		delete duration_metric;
-		delete power_metric;
+        // delete memory_metric;
+		// delete duration_metric;
+		// delete power_metric;
         delete cw; 
         cw = nullptr;
-        memory_metric = nullptr;
-        duration_metric = nullptr;
-        power_metric = nullptr;
+        // memory_metric = nullptr;
+        // duration_metric = nullptr;
+        // power_metric = nullptr;
     }
     auto gt_traj = this->GetGroundTruth().GetMainOutput(slambench::values::VT_POSE);
     slambench::outputs::TrajectoryAlignmentMethod *alignment_method;
@@ -371,9 +371,12 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 
 	cw->AddColumn(&(this->row_number));
     bool have_timestamp = false;
-	memory_metric   = new slambench::metrics::MemoryMetric();
-	duration_metric = new slambench::metrics::DurationMetric();
-	power_metric    = new slambench::metrics::PowerMetric();
+    if (!cw_initialised_) {
+	    memory_metric   = new slambench::metrics::MemoryMetric();
+	    duration_metric = new slambench::metrics::DurationMetric();
+	    power_metric    = new slambench::metrics::PowerMetric();
+    }
+
     for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
         if (cw_initialised_) { 
             lib->GetMetricManager().reset();
@@ -412,7 +415,8 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 			lib->GetMetricManager().AddFrameMetric(rpe_metric);
 			cw->AddColumn(new slambench::CollectionValueLibColumnInterface(lib, rpe_metric, lib->GetMetricManager().GetFramePhase()));
 		}
-			// Add a duration metric
+		
+        // Add a duration metric
 		lib->GetMetricManager().AddFrameMetric(duration_metric);
 		lib->GetMetricManager().AddPhaseMetric(duration_metric);
 		cw->AddColumn(new slambench::ValueLibColumnInterface(lib, duration_metric, lib->GetMetricManager().GetFramePhase()));
@@ -448,6 +452,9 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 
 void SLAMBenchConfigurationLifelong::OutputToTxt()
 {
+    if (this->output_filename_ == "" ) {
+        return;
+    }
 	float x, y, z;
 	Eigen::Matrix3d R;
 	struct timeval tv;

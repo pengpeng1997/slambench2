@@ -28,7 +28,7 @@ public :
 	static XU3Monitor * generate () {
 
 		static XU3Monitor * loader = nullptr;
-		// assert (loader == nullptr);
+		assert (loader == nullptr);
 
 		loader = new XU3Monitor ();
 		if (loader->IsValid()) {
