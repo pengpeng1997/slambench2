@@ -29,6 +29,7 @@
 #include <metrics/Metric.h>
 #include <metrics/ATEMetric.h>
 #include <metrics/PowerMetric.h>
+#include <metrics/MemoryMetric.h>
 
 #include <values/Value.h>
 #include <outputs/Output.h>
@@ -388,8 +389,8 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 
 	cw->AddColumn(&(this->row_number));
     bool have_timestamp = false;
+    slambench::metrics::MemoryMetric* memory_metric = new slambench::metrics::MemoryMetric();
     if (!cw_initialised_) {
-	    memory_metric   = new slambench::metrics::MemoryMetric();
 	    duration_metric = new slambench::metrics::DurationMetric();
 	    power_metric    = new slambench::metrics::PowerMetric();
     }

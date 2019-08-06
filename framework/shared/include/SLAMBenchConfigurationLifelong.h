@@ -20,7 +20,7 @@
 #include <outputs/OutputManagerWriter.h>
 #include <metrics/DurationMetric.h>
 #include <metrics/PowerMetric.h>
-#include <metrics/MemoryMetric.h>
+// #include <metrics/MemoryMetric.h>
 #include "ColumnWriter.h"
 #include <SLAMBenchException.h>
 #include <sys/time.h>
@@ -38,7 +38,7 @@ public:
 private :
     slambench::RowNumberColumn row_number;
     slambench::ColumnWriter *cw = nullptr;
-    slambench::metrics::MemoryMetric* memory_metric = nullptr;
+    // slambench::metrics::MemoryMetric* memory_metric = nullptr;
 	slambench::metrics::DurationMetric* duration_metric = nullptr;
 	slambench::metrics::PowerMetric* power_metric = nullptr;
     
