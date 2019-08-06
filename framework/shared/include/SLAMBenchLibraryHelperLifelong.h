@@ -39,6 +39,7 @@ public:
     SLAMBenchLibraryHelperLifelong (std::string id, std::string lib, std::ostream& l, slambench::io::InputInterface* i) :
             SLAMBenchLibraryHelper(id, lib, l, i)
 	{}
+    slambench::outputs::AlignmentOutput* alignment = nullptr;
 
 
 };

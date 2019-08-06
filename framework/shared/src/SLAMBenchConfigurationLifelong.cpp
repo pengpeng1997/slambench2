@@ -203,6 +203,7 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
     unsigned int frame_count = 0;
     unsigned int bags_count = 0;
     bool ongoing = false;
+    std::map<SLAMBenchLibraryHelper*, Eigen::Matrix4f> libs_trans;
 
     slambench::io::InputInterface* interface = config_lifelong->GetCurrentInputInterface();
     while(interface!=nullptr)
@@ -256,7 +257,9 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
                 }
 
                 lib->GetMetricManager().EndFrame();
-
+                if (libs_trans.count(lib) == 0) {
+                    libs_trans[lib] = dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->alignment->getTransformation();
+                }
             }
 
             // ********* [[ FINALIZE ]] *********
@@ -295,9 +298,19 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
             if(!res)
             {
                 auto gt_frame = dynamic_cast<slambench::io::GTBufferingFrameStream*>(config_lifelong->input_stream_)->GetGTFrames()->GetFrame(0);
-                lib->c_sb_update_frame(lib,gt_frame);
+                Eigen::Matrix4f &t = libs_trans[lib];
+                Eigen::Matrix4f gt;
+                memcpy(gt.data(), gt_frame->GetData(), gt_frame->GetSize());
+                dynamic_cast<slambench::io::DeserialisedFrame*>(gt_frame)->getFrameBuffer().resetLock();
+                Eigen::Matrix4f es = t.inverse() * gt;
+                memcpy(gt_frame->GetData(), es.data(), gt_frame->GetSize());
+                dynamic_cast<slambench::io::DeserialisedFrame*>(gt_frame)->getFrameBuffer().resetLock();
+
+                lib->c_sb_update_frame(lib, gt_frame);
                 std::cout<<"********** feed pose. **********"<<std::endl;
                 
+                dynamic_cast<slambench::io::DeserialisedFrame*>(gt_frame)->getFrameBuffer().resetLock();
+                memcpy(gt_frame->GetData(), gt.data(), gt_frame->GetSize());
             }
         }
         bags_count++;
@@ -398,10 +411,10 @@ void SLAMBenchConfigurationLifelong::init_cw() {
 
 		if (gt_traj) {
 			// Create an aligned trajectory
-			auto alignment = new slambench::outputs::AlignmentOutput("Alignment", new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj), lib_traj, alignment_method);
-			alignment->SetActive(true);
-			alignment->SetKeepOnlyMostRecent(true);
-			auto aligned = new slambench::outputs::AlignedPoseOutput(lib_traj->GetName() + " (Aligned)", alignment, lib_traj);
+			dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->alignment = new slambench::outputs::AlignmentOutput("Alignment", new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj), lib_traj, alignment_method);
+			dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->alignment->SetActive(true);
+			dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->alignment->SetKeepOnlyMostRecent(true);
+			auto aligned = new slambench::outputs::AlignedPoseOutput(lib_traj->GetName() + " (Aligned)", dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->alignment, lib_traj);
 
 			// Add ATE metric
 			auto ate_metric = new slambench::metrics::ATEMetric(new slambench::outputs::PoseOutputTrajectoryInterface(aligned), new slambench::outputs::PoseOutputTrajectoryInterface(gt_traj));

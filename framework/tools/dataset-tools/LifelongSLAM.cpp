@@ -491,7 +491,7 @@ bool loadLifelongSLAMGroundTruthData(const std::string &dirname , SLAMFile &file
             
           int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
-          std::string temp3 = match[3], temp4 = match[4], temp5 = match[5], temp6 = match[6], temp7 = match[7], temp8 = match[8], temp9 = match[9];
+          std::string temp3 = match[3], temp4 = match[7], temp5 = match[11], temp6 = match[15], temp7 = match[19], temp8 = match[23], temp9 = match[27];
           char *p3=(char*)temp3.data();
           char *p4=(char*)temp4.data();
           char *p5=(char*)temp5.data();
@@ -581,7 +581,7 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 
 		 int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
-          std::string temp3 = match[3], temp4 = match[4], temp5 = match[5];
+          std::string temp3 = match[3], temp4 = match[7], temp5 = match[11];
           char *p3=(char*)temp3.data();
           char *p4=(char*)temp4.data();
           char *p5=(char*)temp5.data();
@@ -657,7 +657,7 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 		 int timestampS = std::stoi(match[1]);
 		  int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
 
-          std::string temp3 = match[3], temp4 = match[4], temp5 = match[5];
+          std::string temp3 = match[3], temp4 = match[7], temp5 = match[11];
           char *p3=(char*)temp3.data();
           char *p4=(char*)temp4.data();
           char *p5=(char*)temp5.data();
@@ -722,8 +722,8 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 
 		int timestampS = std::stoi(match[1]);
 		int timestampNS = std::stoi(match[2]) *  std::pow ( 10, 9 - match[2].length());
-        std::string temp3 = match[3], temp4 = match[4], temp5 = match[5], temp6 = match[6], temp7 = match[7], temp8 = match[8], temp9 = match[9],
-                    temp10 = match[10], temp11 = match[11], temp12 = match[12], temp13 = match[13], temp14 = match[14], temp15 = match[15];
+        std::string temp3 = match[3], temp4 = match[7], temp5 = match[11], temp6 = match[15], temp7 = match[19], temp8 = match[23], temp9 = match[27],
+                    temp10 = match[31], temp11 = match[35], temp12 = match[39], temp13 = match[43], temp14 = match[47], temp15 = match[51];
           char *p3=(char*)temp3.data();
           char *p4=(char*)temp4.data();
           char *p5=(char*)temp5.data();

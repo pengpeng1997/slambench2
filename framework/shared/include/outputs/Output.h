@@ -115,10 +115,14 @@ namespace slambench {
 			virtual ~AlignmentOutput();
 			
 			void Recalculate() override;
+			Eigen::Matrix4f& getTransformation() {
+				return transformation;
+			}
 		private:
 			TrajectoryInterface *gt_trajectory_;
 			BaseOutput *trajectory_;
 			TrajectoryAlignmentMethod *method_;
+			Eigen::Matrix4f transformation;
 		};
 		
 		class AlignedPoseOutput : public DerivedOutput {
