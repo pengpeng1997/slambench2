@@ -12,6 +12,7 @@
 #define FRAMEWORK_SHARED_INCLUDE_SLAMBENCHAPI_H_
 
 #include <SLAMBenchLibraryHelper.h>
+#include <SLAMBenchConfigurationLifelong.h>
 
 #include <Eigen/Core>
 

@@ -32,6 +32,7 @@ public:
 
 private:
     SLAMBenchLibraryHelperLifelong ();
+    bool sensor_update = false;
 
 
 public:
@@ -40,8 +41,15 @@ public:
             SLAMBenchLibraryHelper(id, lib, l, i)
 	{}
     slambench::outputs::AlignmentOutput* alignment = nullptr;
-
-
+    void resetSensorUpdate(bool b) {
+        sensor_update = b;
+    }
+    bool getSensorUpdate() {
+        return sensor_update;
+    }
+    void resetInputInterface(slambench::io::InputInterface* input_interface) {
+        this->_input_interface = input_interface;
+    }
 };
 
 #endif /* FRAMEWORK_SHARED_INCLUDE_SLAMBENCHLIBRARYHELPER_H_ */

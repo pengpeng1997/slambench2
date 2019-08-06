@@ -233,7 +233,7 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
                 // ********* [[ SEND THE FRAME ]] *********
                 ongoing=not lib->c_sb_update_frame(lib,current_frame);
-                // std::cout<<"update here!"<<std::endl;
+
                 // This algorithm hasn't received enough frames yet.
                 if(ongoing) {
                     // std::cout<<"no enough frame."<<std::endl;
@@ -308,7 +308,7 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
 
                 lib->c_sb_update_frame(lib, gt_frame);
                 std::cout<<"********** feed pose. **********"<<std::endl;
-                
+
                 dynamic_cast<slambench::io::DeserialisedFrame*>(gt_frame)->getFrameBuffer().resetLock();
                 memcpy(gt_frame->GetData(), gt.data(), gt_frame->GetSize());
             }
@@ -355,6 +355,10 @@ void SLAMBenchConfigurationLifelong::LoadNextInputInterface() {
     init_sensors();
     InitGroundtruth();
     init_cw();
+    for (auto lib : this->slam_libs) {
+        dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->resetInputInterface(this->GetCurrentInputInterface());
+        dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->resetSensorUpdate(true);
+    }
 }
 
 void SLAMBenchConfigurationLifelong::init_cw() {
