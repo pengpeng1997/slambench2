@@ -47,6 +47,13 @@
 #include <dlfcn.h>
 #define LOAD_FUNC2HELPER(handle,lib,f)     *(void**)(& lib->f) = dlsym(handle,#f); const char *dlsym_error_##lib##f = dlerror(); if (dlsym_error_##lib##f) {std::cerr << "Cannot load symbol " << #f << dlsym_error_##lib##f << std::endl; dlclose(handle); exit(1);}
 
+
+bool sb_relocalize_default(SLAMBenchLibraryHelper*, slambench::io::SLAMFrame*)
+{
+    std::cout << "Assumed successful relocalization by default!" << std::endl;
+    return true;
+}
+
 //TODO: (Mihai) too much duplicated code here. One option is to move LOAD_FUNC2HELPER into the SLAMBenchConfiguration header
 // Need to figure out how to avoid rewriting the whole thing without breaking SLAMBenchConfiguration
 void SLAMBenchConfigurationLifelong::add_slam_library(std::string so_file, std::string identifier) {
@@ -76,7 +83,13 @@ void SLAMBenchConfigurationLifelong::add_slam_library(std::string so_file, std::
     LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_process_once);
     LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_clean_slam_system);
     LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_update_outputs);
-    LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_relocalize);
+    // workaround to be compatible with benchmarks that does not implement the relocalize API
+    if (dlsym(handle, "_Z13sb_relocalizeP22SLAMBenchLibraryHelperPN9slambench2io9SLAMFrameE")) {
+        LOAD_FUNC2HELPER(handle,lib_ptr,c_sb_relocalize);
+    } else {
+        std::cout << "Benchmark does not implement sb_relocalize(). Will use the default." << std::endl;
+        lib_ptr->c_sb_relocalize = &sb_relocalize_default;
+    }
     this->slam_libs.push_back(lib_ptr);
 
 
