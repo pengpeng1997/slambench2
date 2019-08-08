@@ -29,6 +29,7 @@
 #include <ctime>
 #include <cmath>
 #include <unistd.h>
+#include <list>
 
 
 class SLAMBenchConfigurationLifelong : public SLAMBenchConfiguration {
@@ -43,7 +44,7 @@ private :
 	slambench::metrics::PowerMetric* power_metric = nullptr;
     
     bool cw_initialised_ = false;
-    std::vector<slambench::io::InputInterface*> input_interfaces;
+    std::list<slambench::io::InputInterface*> input_interfaces;
 
 public :
 

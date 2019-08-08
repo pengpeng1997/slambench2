@@ -341,7 +341,7 @@ slambench::io::InputInterface * SLAMBenchConfigurationLifelong::GetCurrentInputI
         return nullptr; // FIXME: (Mihai) this looks dodgy
         //throw std::logic_error("Input interface has not been added to SLAM configuration");
     }
-    return input_interfaces.back();
+    return input_interfaces.front();
 }
 
 const slambench::io::SensorCollection& SLAMBenchConfigurationLifelong::GetSensors()
@@ -361,7 +361,7 @@ void SLAMBenchConfigurationLifelong::init_sensors() {
 }
 
 void SLAMBenchConfigurationLifelong::LoadNextInputInterface() {
-    input_interfaces.pop_back();
+    input_interfaces.pop_front();
     reset_sensors();
     if(input_interfaces.empty())
         return;
