@@ -230,7 +230,7 @@ bool loadLifelongSLAMDepthData(const std::string &dirname, const std::string &se
 	depth_sensor->DisparityType = disparity_type;
 	depth_sensor->CopyDisparityParams(disparity_params);
 	depth_sensor->Description = "Depth";
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("base_link", sensor_name, dirname + "/trans_matrix.yaml");
 	depth_sensor->CopyPose(pose);
 
 	depth_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / depth_sensor->Width;
@@ -313,7 +313,7 @@ bool loadLifelongSLAMRGBData(const std::string &dirname, const std::string &sens
 	rgb_sensor->FrameFormat = frameformat::Raster;
 	rgb_sensor->PixelFormat = pixelformat::RGB_III_888;
 	rgb_sensor->Description = "RGB";
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("base_link", sensor_name, dirname + "/trans_matrix.yaml");
 	rgb_sensor->CopyPose(pose);
 
 	rgb_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / rgb_sensor->Width;
@@ -390,7 +390,7 @@ bool loadLifelongSLAMGreyData(const std::string &dirname, const std::string &sen
 	grey_sensor->FrameFormat = frameformat::Raster;
 	grey_sensor->PixelFormat = pixelformat::G_I_8;
 	grey_sensor->Description = "Grey";
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("base_link", sensor_name, dirname + "/trans_matrix.yaml");
 	grey_sensor->CopyPose(pose);
 
 	grey_sensor->Intrinsics[0] = f[sensor_name]["intrinsics"]["data"][0].as<float>() / grey_sensor->Width;
@@ -548,12 +548,21 @@ bool loadLifelongSLAMAccelerometerData(const std::string &dirname, const std::st
 
 	accelerometer_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
-	accelerometer_sensor->AcceleratorNoiseDensity = 2.0000e-3;
-	accelerometer_sensor->AcceleratorDriftNoiseDensity = 4.0e-5;
-	accelerometer_sensor->AcceleratorBiasDiffusion = 3.0000e-3;
-	accelerometer_sensor->AcceleratorSaturation = 176.0;
+	// accelerometer_sensor->AcceleratorNoiseDensity = 2.0000e-3;
+	// accelerometer_sensor->AcceleratorDriftNoiseDensity = 4.0e-5;
+	// accelerometer_sensor->AcceleratorBiasDiffusion = 3.0000e-3;
+	// accelerometer_sensor->AcceleratorSaturation = 176.0;
 
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	for(int i = 0; i < 12; i++) {
+		accelerometer_sensor->Intrinsic[i] = f[sensor_name]["imu_intrinsic"]["data"][i].as<float>();
+	}
+
+	for(int i = 0; i < 3; i++) {
+		accelerometer_sensor->NoiseVariances[i] = f[sensor_name]["noise_variances"]["data"][i].as<float>();
+		accelerometer_sensor->BiasVariances[i] = f[sensor_name]["bias_variances"]["data"][i].as<float>();
+	}
+	
+	Eigen::Matrix4f pose = compute_trans_matrix("base_link", sensor_name, dirname + "/trans_matrix.yaml");
 	accelerometer_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(accelerometer_sensor);
@@ -623,12 +632,20 @@ bool loadLifelongSLAMGyroData(const std::string &dirname, const std::string &sen
 
 	gyro_sensor->Rate = f[sensor_name]["fps"].as<float>();
 
-	gyro_sensor->GyroscopeNoiseDensity = 1.6968e-04;
-	gyro_sensor->GyroscopeDriftNoiseDensity = 4.0e-6;
-	gyro_sensor->GyroscopeBiasDiffusion = 1.9393e-05;
-	gyro_sensor->GyroscopeSaturation   =   7.8;
+	// gyro_sensor->GyroscopeNoiseDensity = 1.6968e-04;
+	// gyro_sensor->GyroscopeDriftNoiseDensity = 4.0e-6;
+	// gyro_sensor->GyroscopeBiasDiffusion = 1.9393e-05;
+	// gyro_sensor->GyroscopeSaturation   =   7.8;
+	
+	for(int i = 0; i < 12; i++) {
+		gyro_sensor->Intrinsic[i] = f[sensor_name]["imu_intrinsic"]["data"][i].as<float>();
+	}
+	for(int i = 0; i < 3; i++) {
+		gyro_sensor->NoiseVariances[i] = f[sensor_name]["noise_variances"]["data"][i].as<float>();
+		gyro_sensor->BiasVariances[i] = f[sensor_name]["bias_variances"]["data"][i].as<float>();
+	}
 
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = compute_trans_matrix("base_link", sensor_name, dirname + "/trans_matrix.yaml");
 	gyro_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(gyro_sensor);
@@ -694,7 +711,7 @@ bool loadLifelongSLAMOdomData(const std::string &dirname, const std::string &sen
 	odom_sensor->Index = file.Sensors.size();
 	odom_sensor->Description = "OdomSensor";
 
-	Eigen::Matrix4f pose = compute_trans_matrix("RigidBody1", sensor_name, dirname + "/trans_matrix.yaml");
+	Eigen::Matrix4f pose = Eigen::Matrix4f::Identity();
 	odom_sensor->CopyPose(pose);
 
 	file.Sensors.AddSensor(odom_sensor);

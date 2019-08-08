@@ -31,8 +31,8 @@ class LifelongSLAMReader :  public DatasetReader {
 
 public :
 	std::string input;
-	bool color = false, grey = false, depth = false, aligned_depth = false, fisheye1 = false, fisheye2 = false,
-	 d400_accel = false, d400_gyro = false, t265_accel = false, t265_gyro = false, odom = false, gt = true;
+	bool color = true, grey = true, depth = true, aligned_depth = true, fisheye1 = true, fisheye2 = true,
+	 d400_accel = true, d400_gyro = true, t265_accel = true, t265_gyro = true, odom = true, gt = true;
 
 	LifelongSLAMReader(std::string name) : DatasetReader(name) { 
 
