@@ -45,6 +45,7 @@ private :
     
     bool cw_initialised_ = false;
     std::list<slambench::io::InputInterface*> input_interfaces;
+    slambench::io::SensorCollection* first_sensors;
 
 public :
     bool input_interface_updated = false;

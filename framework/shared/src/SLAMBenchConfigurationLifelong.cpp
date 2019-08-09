@@ -358,6 +358,14 @@ const slambench::io::SensorCollection& SLAMBenchConfigurationLifelong::GetSensor
 
 
 void SLAMBenchConfigurationLifelong::AddInputInterface(slambench::io::InputInterface *input_ref) {
+    //workaround to be compatible with benchmarks that does not implement sensors resetting.
+    //assume different input_interfaces has exactly the same types of sensors.
+    //If sensors are different, may introduce problems.
+    if (input_interfaces.empty()) {
+        first_sensors = &input_ref->GetSensors();
+    } else {
+        input_ref->GetSensors() = *first_sensors;
+    }
     input_interfaces.push_back(input_ref);
 }
 
