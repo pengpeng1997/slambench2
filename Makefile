@@ -322,7 +322,7 @@ datasetslist:
 
 #### EuRoCMAV
 ###############
-LifelongSLAM : # make ~ useless
+OpenLORIS : # make ~ useless
 	
 	@echo "success"
 
