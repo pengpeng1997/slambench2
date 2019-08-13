@@ -267,10 +267,12 @@ void SLAMBenchConfigurationLifelong::compute_loop_algorithm(SLAMBenchConfigurati
                     bool res = dynamic_cast<SLAMBenchLibraryHelperLifelong*>(lib)->c_sb_relocalize(lib);
                     config_lifelong->input_interface_updated = false;
                     //Save the result
-                    std::ofstream OutFile;
-                    OutFile.open(lib->get_library_name() + "_" + config_lifelong->output_filename_, std::ios::app);
-   		            OutFile << "#Relocalization result:"<<res<<std::endl;
-                    OutFile.close();
+                    if (config_lifelong->output_filename_ != "" ) {
+                        std::ofstream OutFile;
+                        OutFile.open(config_lifelong->output_filename_ + "_" + lib->get_library_name() + ".txt", std::ios::app);
+   		                OutFile << "#Relocalization result:"<<res<<std::endl;
+                        OutFile.close();
+                    }
                     // Mihai: Might want to add a reset function to feed the pose?
                     if(!res)
                     {
@@ -504,11 +506,11 @@ void SLAMBenchConfigurationLifelong::OutputToTxt()
     }
 	float x, y, z;
 	Eigen::Matrix3d R;
-	struct timeval tv;
+	//struct timeval tv;
 	for(SLAMBenchLibraryHelper *lib : this->GetLoadedLibs()) {
 	    std::ofstream OutFile;
-		OutFile.open(lib->get_library_name() + "_" + this->output_filename_, std::ios::app);
-   		OutFile << "#DatasetTimestamp, ProcessTimestamp, position.x, y, z, quaterniond.x, y, z, w"<<std::endl;	
+		OutFile.open(this->output_filename_ + "_" + lib->get_library_name() + ".txt", std::ios::app);
+   		OutFile << "#DatasetTimestamp, position.x, y, z, quaterniond.x, y, z, w"<<std::endl;	
 		auto output = lib->GetOutputManager().GetOutput("Pose")->GetValues();
 		for (auto it = output.begin(); it != output.end(); ++it ) {
 			for (int i = 0; i < 3; i++) {
@@ -521,9 +523,10 @@ void SLAMBenchConfigurationLifelong::OutputToTxt()
 			x = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(0, 3);
 			y = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(1, 3);
 			z = (dynamic_cast<const slambench::values::PoseValue*>(it->second))->GetValue()(2, 3);
-			gettimeofday(&tv,NULL); 
-			OutFile<<it->first<<" "<<tv.tv_sec<<"."<<tv.tv_usec<<" "<<x<<" "<<y<<" "<<z<<" "<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<std::endl;
+			//gettimeofday(&tv,NULL); 
+			OutFile<<it->first<<" "<<x<<" "<<y<<" "<<z<<" "<<q.x()<<" "<<q.y()<<" "<<q.z()<<" "<<q.w()<<std::endl;
 		}
 		OutFile.close();
 	}
 }
+
